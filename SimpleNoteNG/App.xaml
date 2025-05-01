@@ -4,6 +4,169 @@
              xmlns:local="clr-namespace:SimpleNoteNG"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <!--Шрифт приложения-->
+        <FontFamily x:Key="Kode">pack://application:,,,/Fonts/KodeMono-SemiBold.ttf#Kode Mono SemiBold</FontFamily>
+        <FontFamily x:Key="Kode-Regular">pack://application:,,,/Fonts/KodeMono-Regular.ttf#Kode Mono Regular</FontFamily>
+        <FontFamily x:Key="Kode-Medium">pack://application:,,,/Fonts/KodeMono-Regular.ttf#Kode Mono Medium</FontFamily>
+
+        <!--Hover для кнопок сворачивания и закрытия окон-->
+        <Style x:Key="CloseMinimizeButtonsHover" TargetType="{x:Type Button}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#FF646464"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!--Hover для кнопок-->
+        <Style x:Key="OrangeButtonsHover" TargetType="{x:Type Button}">
+            <Setter Property="Background" Value="#FFCF6E00"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#FFFF8800"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Стиль для TextBox с placeholder -->
+        <Style x:Key="PlaceholderTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="Background" Value="#BBBBBB"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Grid>
+                            <Border x:Name="border"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"/>
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="5"/>
+                            <TextBlock x:Name="placeholderText" Cursor="IBeam" 
+                          Text="{TemplateBinding Tag}"
+                          Foreground="#FF7F7F7F"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          Visibility="Collapsed"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="Text" Value="">
+                                <Setter TargetName="placeholderText" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="Text" Value="{x:Null}">
+                                <Setter TargetName="placeholderText" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="placeholderText" Property="Visibility" Value="Hidden"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Стиль для PasswordBox с placeholder -->
+        <Style x:Key="ModernPasswordBoxStyle" TargetType="PasswordBox">
+            <Setter Property="Background" Value="#BBBBBB"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="PasswordBox">
+                        <Grid>
+                            <!-- Основная обводка -->
+                            <Border x:Name="border"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="2"/>
+
+                            <!-- Контейнер для текста пароля -->
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="5"/>
+
+                            <!-- Плейсхолдер -->
+                            <TextBlock x:Name="placeholderText"
+                      Text="{TemplateBinding Tag}"
+                      Foreground="#FF7F7F7F"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      IsHitTestVisible="False"/>
+                        </Grid>
+
+                        <!-- Логика отображения плейсхолдера -->
+                        <ControlTemplate.Triggers>
+                            <!-- Показывать плейсхолдер ТОЛЬКО когда:
+                 1. Пароль пустой (через триггер на IsEnabled)
+                 2. Нет фокуса ввода -->
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsEnabled" Value="True"/>
+                                    <Condition Property="IsKeyboardFocused" Value="False"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="placeholderText" Property="Visibility" Value="Visible"/>
+                            </MultiTrigger>
+
+                            <!-- Всегда скрывать плейсхолдер при фокусе -->
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="placeholderText" Property="Visibility" Value="Collapsed"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Стиль для клавиш пианино -->
+        <Style x:Key="PianoKeyStyle" TargetType="Button">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="BorderBrush" Value="Gray"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <!-- Стиль для черных клавиш (диезов) -->
+                <Trigger Property="Content" Value="#">
+                    <Setter Property="Background" Value="Black"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
     </Application.Resources>
 </Application>

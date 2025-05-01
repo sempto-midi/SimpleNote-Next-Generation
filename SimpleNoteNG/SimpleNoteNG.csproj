@@ -2,10 +2,59 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <TargetFramework>net9.0-windows10.0.26100.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
+    <ApplicationIcon>Images\icon.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Fonts\KodeMono-SemiBold.ttf" />
+    <None Remove="Images\Create_Block.png" />
+    <None Remove="Images\logo.png" />
+    <None Remove="Images\Metronome.png" />
+    <None Remove="Images\Pause_Button.png" />
+    <None Remove="Images\Play_Button.png" />
+    <None Remove="Images\qr_gitbook.png" />
+    <None Remove="Images\qr_github.png" />
+    <None Remove="Images\Stop_Button.png" />
+    <None Remove="Images\Upload_Block.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Images\icon.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.4" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.4">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.4" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.4">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
+    <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="NAudio.Lame" Version="2.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Fonts\KodeMono-SemiBold.ttf" />
+    <Resource Include="Images\Create_Block.png" />
+    <Resource Include="Images\logo.png" />
+    <Resource Include="Images\Metronome.png" />
+    <Resource Include="Images\Pause_Button.png" />
+    <Resource Include="Images\Play_Button.png" />
+    <Resource Include="Images\qr_gitbook.png" />
+    <Resource Include="Images\qr_github.png" />
+    <Resource Include="Images\Stop_Button.png" />
+    <Resource Include="Images\Upload_Block.png" />
+  </ItemGroup>
 
 </Project>

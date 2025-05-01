@@ -1,0 +1,23 @@
+﻿<UserControl x:Class="SimpleNoteNG.Controls.MixerChannel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:SimpleNoteNG.Controls"
+             mc:Ignorable="d" 
+             Width="120" Height="200"
+             FontFamily="{DynamicResource Kode-Medium}">
+        
+    <Border BorderBrush="#FF3E3E3E" BorderThickness="1" Background="#FF252525" Width="100">
+        <StackPanel>
+            <TextBlock Text="{Binding ChannelNumber}" 
+                  Foreground="White" 
+                  FontWeight="Bold"
+                  HorizontalAlignment="Center"/>
+            <Slider Minimum="0" Maximum="100" Value="80"
+                Orientation="Vertical" Height="100" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+            <CheckBox Content="Mute" Foreground="LightGray" Margin="0,15,0,5" HorizontalAlignment="Center"/>
+            <CheckBox Content="Solo" Foreground="LightGray" Margin="0,5,0,0" HorizontalAlignment="Center"/>
+        </StackPanel>
+    </Border>
+</UserControl>
