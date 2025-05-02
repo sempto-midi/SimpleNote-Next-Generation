@@ -14,6 +14,9 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using Windows.Web.AtomPub;
+using SimpleNoteNG.Pages;
+using System.Windows.Media.Animation;
+using Windows.Networking.NetworkOperators;
 
 namespace SimpleNoteNG.Windows
 {
@@ -27,6 +30,9 @@ namespace SimpleNoteNG.Windows
         private List<Project> _allProjects = new List<Project>();
         private readonly Dictionary<Button, int> _projectIds = new Dictionary<Button, int>();
 
+        private bool _isProfileShown = false;
+        private Profile _profilePage;
+
         public ProjectsWindow(string username, int userId)
         {
             InitializeComponent();
@@ -34,14 +40,120 @@ namespace SimpleNoteNG.Windows
             _userId = userId;
 
             InitializeUI();
+            InitializeProfilePage();
             LoadProjects();
             SetupSearch();
         }
-
+        private void StartText_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == MouseButton.Left)
+            {
+                if (_isProfileShown)
+                {
+                    HideProfile();
+                }
+                else
+                {
+                    ShowProfile();
+                }
+            }
+        }
         private void InitializeUI()
         {
-            StartText.Text = $"LET'S GO, {_username.ToUpper()}!";
+            StartText.Text = $"{_username.ToUpper()}!";
             SearchBox.TextChanged += (s, e) => FilterProjects(SearchBox.Text);
+
+            // Убираем фокус с StartText при загрузке
+            Loaded += (s, e) => { Keyboard.ClearFocus(); };
+        }
+
+        private void InitializeProfilePage()
+        {
+            using (var db = new AppDbContext())
+            {
+                var user = db.Users.FirstOrDefault(u => u.UserId == _userId);
+                if (user != null)
+                {
+                    _profilePage = new Profile(_userId, _username, user.Email, user.EmailConfirmed);
+                    ProfileFrame.Content = _profilePage;
+                }
+            }
+        }
+
+        private void ShowProfile()
+        {
+            _isProfileShown = true;
+            ProfileFrame.Visibility = Visibility.Visible;
+
+            var animation = new DoubleAnimation
+            {
+                From = 0,
+                To = 296,
+                Duration = TimeSpan.FromSeconds(0.6),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+
+            ProfileFrame.BeginAnimation(FrameworkElement.HeightProperty, animation);
+        }
+
+        public void DeleteAccount()
+        {
+            try
+            {
+                using (var db = new AppDbContext())
+                {
+                    // Удаляем все проекты пользователя
+                    var userProjects = db.Projects.Where(p => p.UserId == _userId).ToList();
+                    db.Projects.RemoveRange(userProjects);
+
+                    // Удаляем самого пользователя
+                    var user = db.Users.FirstOrDefault(u => u.UserId == _userId);
+                    if (user != null)
+                    {
+                        db.Users.Remove(user);
+                    }
+
+                    db.SaveChanges();
+                }
+
+                // Возвращаемся на главный экран
+                var mainWindow = new MainWindow();
+                mainWindow.Show();
+                this.Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error deleting account: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        public void Logout()
+        {
+            // Возвращаемся на главный экран
+            var mainWindow = new MainWindow();
+            mainWindow.Show();
+            this.Close();
+        }
+
+        public void HideProfile()
+        {
+            _isProfileShown = false;
+
+            var animation = new DoubleAnimation
+            {
+                From = 296,
+                To = 0,
+                Duration = TimeSpan.FromSeconds(0.3),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+
+            animation.Completed += (s, _) =>
+            {
+                ProfileFrame.Visibility = Visibility.Collapsed;
+            };
+
+            ProfileFrame.BeginAnimation(FrameworkElement.HeightProperty, animation);
         }
 
         private void SetupSearch()

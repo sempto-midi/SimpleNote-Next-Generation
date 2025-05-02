@@ -23,6 +23,7 @@ namespace SimpleNoteNG
         public ModalBox(Window window, string message)
         {
             InitializeComponent();
+            Owner = window;
             MessageText.Text = message;
         }
 

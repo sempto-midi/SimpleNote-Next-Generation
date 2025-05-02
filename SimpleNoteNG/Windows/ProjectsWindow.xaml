@@ -171,18 +171,45 @@
 
         <!-- Action buttons -->
         <StackPanel Grid.Column="1">
-            <TextBlock x:Name="StartText" Foreground="White" FontSize="48" 
-                   HorizontalAlignment="Center" Margin="0,95,0,0"/>
+            <StackPanel Orientation="Horizontal" Margin="0,95,0,0" HorizontalAlignment="Center">
+                <TextBlock Text="LET'S GO, " FontSize="48" HorizontalAlignment="Center" Foreground="White"/>
+                <TextBlock x:Name="StartText" 
+                    Foreground="#FFCF6E00" 
+                    FontSize="48"
+                    HorizontalAlignment="Center" 
+                    Focusable="True"
+                    Cursor="Hand"
+                    MouseDown="StartText_MouseDown">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="#FFCF6E00"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Foreground" Value="#FFF9CB97"/>
+                                    <Setter Property="TextDecorations" Value="Underline"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,45,0,0">
-                <Button x:Name="Create" Height="250" Width="183" Margin="0,0,15,0" Background="Transparent" 
+                <Button x:Name="Create" Height="250" Width="183" Margin="0,0,15,0" Background="Transparent" Cursor="Hand"
                     Style="{StaticResource HoverButtonStyle}" Click="Create_Click">
                     <Image Source="../Images/Create_Block.png" Stretch="Fill"/>
                 </Button>
-                <Button x:Name="Upload" Height="250" Width="183" Margin="15,0,0,0" Background="Transparent"
+                <Button x:Name="Upload" Height="250" Width="183" Margin="15,0,0,0" Background="Transparent" Cursor="Hand"
                     Style="{StaticResource HoverButtonStyle}">
                     <Image Source="../Images/Upload_Block.png" Stretch="Fill"/>
                 </Button>
             </StackPanel>
         </StackPanel>
+
+        <Frame x:Name="ProfileFrame" 
+           Grid.Column="1" 
+           VerticalAlignment="Bottom" 
+           Width="396" 
+           HorizontalAlignment="Center" 
+           Visibility="Collapsed"/>
     </Grid>
 </Window>

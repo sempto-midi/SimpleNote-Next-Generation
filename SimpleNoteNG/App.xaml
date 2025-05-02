@@ -4,6 +4,7 @@
              xmlns:local="clr-namespace:SimpleNoteNG"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
+        
         <!--Шрифт приложения-->
         <FontFamily x:Key="Kode">pack://application:,,,/Fonts/KodeMono-SemiBold.ttf#Kode Mono SemiBold</FontFamily>
         <FontFamily x:Key="Kode-Regular">pack://application:,,,/Fonts/KodeMono-Regular.ttf#Kode Mono Regular</FontFamily>
@@ -42,7 +43,7 @@
             </Setter>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#FFFF8800"/>
+                    <Setter Property="Background" Value="#FFF59120"/>
                 </Trigger>
             </Style.Triggers>
         </Style>

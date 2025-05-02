@@ -117,19 +117,23 @@
         </StackPanel>
 
         <!--Приветственный блок-->
-        <TextBlock Grid.Row="1" Grid.Column="1" Text="Welcome to the SimpleNote DAW!" FontSize="24" Foreground="White" Height="40" VerticalAlignment="Top" Margin="0,15,0,10"/>
-        <Button x:Name="btnLogin" Content="SignIn" Background="Transparent" BorderBrush="#FFCF6E00" Width="150" Height="80"
+        <TextBlock Grid.Row="1" Grid.Column="1" Text="Welcome to the SimpleNote DAW!" FontSize="24" 
+            Foreground="White" Height="40" VerticalAlignment="Top" Margin="0,15,0,10"/>
+        <Button x:Name="btnLogin" Content="SignIn" Width="150" Height="80"
             Foreground="White" Grid.Row="1" Grid.Column="1" Cursor="Hand" Click="btnLogin_Click"
-            HorizontalAlignment="Left" BorderThickness="3" FontSize="20" VerticalAlignment="Top" Margin="0,70,0,0">
+            Style="{DynamicResource CloseMinimizeButtonsHover}"
+            HorizontalAlignment="Left" FontSize="20" VerticalAlignment="Top" Margin="0,70,0,0">
             <Button.Resources>
                 <Style TargetType="{x:Type Border}">
                     <Setter Property="CornerRadius" Value="15"/>
+                    <Setter Property="BorderBrush" Value="#FFCF6E00"/>
+                    <Setter Property="BorderThickness" Value="3"/>
                 </Style>
             </Button.Resources>
         </Button>
 
-        <Button x:Name="btnRegister" Grid.Row="1" Grid.Column="1" Content="SignUp" Background="#FFCF6E00" BorderBrush="#FFCF6E00" 
-            Width="150" Height="80"
+        <Button x:Name="btnRegister" Grid.Row="1" Grid.Column="1" Content="SignUp" BorderBrush="#FFCF6E00" 
+            Width="150" Height="80" Style="{DynamicResource OrangeButtonsHover}"
             Foreground="White" Cursor="Hand" Click="btnRegister_Click"
             FontSize="20" HorizontalAlignment="Right" Margin="0,70,0,0" VerticalAlignment="Top">
             <Button.Resources>

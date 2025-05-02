@@ -101,7 +101,7 @@
                         </i:Interaction.Behaviors>
                     </PasswordBox>
                     <Button x:Name="btnSignIn" Grid.Row="3" Margin="20,15,20,15" Height="60" Width="400"
-                        Background="#FFCF6E00" Content="sign in" FontSize="30" Foreground="White" Cursor="Hand"
+                        Content="sign in" FontSize="30" Foreground="White" Cursor="Hand"
                         Style="{DynamicResource OrangeButtonsHover}"
                         Click="btnSignIn_Click">
                         <Button.Resources>

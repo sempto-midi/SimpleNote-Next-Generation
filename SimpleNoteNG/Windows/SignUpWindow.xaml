@@ -121,7 +121,7 @@
                             <!-- Подключаем Behavior -->
                         </i:Interaction.Behaviors>
                     </PasswordBox>
-                    <Button x:Name="btnSignUp" Grid.Row="5" Margin="20,0,20,13" Height="60" Width="400" Background="#FFCF6E00"
+                    <Button x:Name="btnSignUp" Grid.Row="5" Margin="20,0,20,13" Height="60" Width="400"
                         Content="sign up" FontSize="30" Foreground="White" Cursor="Hand"
                         Click="btnSignUp_Click"
                         Style="{DynamicResource OrangeButtonsHover}">
