@@ -1,22 +1,14 @@
-﻿using SimpleNoteNG.Data;
+﻿using Microsoft.EntityFrameworkCore;
+using SimpleNoteNG.Data;
 using SimpleNoteNG.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using SimpleNoteNG.Pages;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
-using Windows.Web.AtomPub;
-using SimpleNoteNG.Pages;
 using System.Windows.Media.Animation;
-using Windows.Networking.NetworkOperators;
+using System.Windows.Threading;
 
 namespace SimpleNoteNG.Windows
 {
@@ -43,6 +35,9 @@ namespace SimpleNoteNG.Windows
             InitializeProfilePage();
             LoadProjects();
             SetupSearch();
+
+            // Добавляем обработчик для кнопки Upload
+            Upload.Click += Upload_Click;
         }
         private void StartText_MouseDown(object sender, MouseButtonEventArgs e)
         {
@@ -261,13 +256,16 @@ namespace SimpleNoteNG.Windows
 
         private Button CreateProjectButton(Project project)
         {
-            return new Button
+            var button = new Button
             {
                 Style = (Style)FindResource("FileButtonStyle"),
                 Content = project.ProjectName,
                 Tag = project.UpdatedAt.ToString("dd.MM.yyyy (HH:mm)"),
                 Cursor = Cursors.Hand
             };
+
+            button.Click += ProjectButton_Click;
+            return button;
         }
 
         private void ProjectButton_Click(object sender, RoutedEventArgs e)
@@ -276,7 +274,19 @@ namespace SimpleNoteNG.Windows
             {
                 try
                 {
-                    OpenWorkspace(projectId);
+                    using (var db = new AppDbContext())
+                    {
+                        var project = db.Projects.FirstOrDefault(p => p.ProjectId == projectId);
+                        if (project != null)
+                        {
+                            OpenWorkspace(projectId, project.Path);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Project not found in database", "Error",
+                                          MessageBoxButton.OK, MessageBoxImage.Error);
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -285,58 +295,146 @@ namespace SimpleNoteNG.Windows
             }
         }
 
-        private void OpenWorkspace(int projectId)
+        private void OpenWorkspace(int projectId, string projectPath)
         {
             var workspace = new Workspace(projectId, _userId);
             workspace.Show();
+
+            workspace.Dispatcher.BeginInvoke(() =>
+            {
+                try
+                {
+                    if (!string.IsNullOrEmpty(projectPath) && File.Exists(projectPath))
+                    {
+                        workspace.LoadProject(projectPath);
+                    }
+                    else
+                    {
+                        workspace.InitializeEmptyProject();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error loading project: {ex.Message}", "Error",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }, DispatcherPriority.Loaded);
+
             this.Close();
         }
 
         private void Create_Click(object sender, RoutedEventArgs e)
-{
-    try
-    {
-        using (var db = new AppDbContext())
         {
-            // Получаем список всех существующих проектов с именами, начинающимися на "New Project"
-            var existingProjects = db.Projects
-                .Where(p => p.ProjectName.StartsWith("New Project"))
-                .ToList();
-
-            // Находим максимальный номер в существующих проектах
-            int maxNumber = 0;
-            foreach (var project in existingProjects)
+            try
             {
-                if (int.TryParse(project.ProjectName.Replace("New Project", "").Trim(), out int number))
+                using (var db = new AppDbContext())
                 {
-                    if (number > maxNumber)
-                        maxNumber = number;
+                    // Получаем список всех существующих проектов с именами, начинающимися на "New Project"
+                    var existingProjects = db.Projects
+                        .Where(p => p.ProjectName.StartsWith("New Project"))
+                        .ToList();
+
+                    // Находим максимальный номер в существующих проектах
+                    int maxNumber = 0;
+                    foreach (var project in existingProjects)
+                    {
+                        if (int.TryParse(project.ProjectName.Replace("New Project", "").Trim(), out int number))
+                        {
+                            if (number > maxNumber)
+                                maxNumber = number;
+                        }
+                    }
+
+                    // Создаем новое имя проекта с номером на 1 больше максимального
+                    string newProjectName = $"New Project {maxNumber + 1}";
+
+                    var newProject = new Project
+                    {
+                        UserId = _userId,
+                        ProjectName = newProjectName,
+                        CreatedAt = DateTime.Now,
+                        UpdatedAt = DateTime.Now,
+                        Path = ""
+                    };
+
+                    db.Projects.Add(newProject);
+                    db.SaveChanges();
+
+                    OpenWorkspace(newProject.ProjectId, "");
                 }
             }
-
-            // Создаем новое имя проекта с номером на 1 больше максимального
-            string newProjectName = $"New Project {maxNumber + 1}";
-
-            var newProject = new Project
+            catch (Exception ex)
             {
-                UserId = _userId,
-                ProjectName = newProjectName,
-                CreatedAt = DateTime.Now,
-                UpdatedAt = DateTime.Now,
-                Path = ""
+                ShowError("Error creating project", ex);
+            }
+        }
+        private void Upload_Click(object sender, RoutedEventArgs e)
+        {
+            var openDialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "MIDI Files (*.mid)|*.mid",
+                DefaultExt = ".mid"
             };
 
-            db.Projects.Add(newProject);
-            db.SaveChanges();
+            if (openDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    // Проверяем, существует ли файл
+                    if (!File.Exists(openDialog.FileName))
+                    {
+                        MessageBox.Show("Selected file does not exist", "Error",
+                            MessageBoxButton.OK, MessageBoxImage.Error);
+                        return;
+                    }
 
-            OpenWorkspace(newProject.ProjectId);
+                    using (var db = new AppDbContext())
+                    {
+                        var projectName = System.IO.Path.GetFileNameWithoutExtension(openDialog.FileName);
+
+                        var newProject = new Project
+                        {
+                            UserId = _userId,
+                            ProjectName = projectName,
+                            Path = openDialog.FileName,
+                            CreatedAt = DateTime.Now,
+                            UpdatedAt = DateTime.Now
+                        };
+
+                        db.Projects.Add(newProject);
+                        db.SaveChanges();
+
+                        // Создаем Workspace в отдельном блоке try-catch
+                        try
+                        {
+                            var workspace = new Workspace(newProject.ProjectId, _userId);
+                            workspace.LoadProject(newProject.Path);
+                            workspace.Show();
+                            this.Close();
+                        }
+                        catch (Exception ex)
+                        {
+                            // Удаляем проект, если не удалось создать Workspace
+                            db.Projects.Remove(newProject);
+                            db.SaveChanges();
+
+                            MessageBox.Show($"Failed to open project: {ex.Message}", "Error",
+                                MessageBoxButton.OK, MessageBoxImage.Error);
+                        }
+                    }
+                }
+                catch (DbUpdateException dbEx)
+                {
+                    MessageBox.Show($"Database error: {dbEx.InnerException?.Message ?? dbEx.Message}", "Error",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Unexpected error: {ex.Message}", "Error",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
         }
-    }
-    catch (Exception ex)
-    {
-        ShowError("Error creating project", ex);
-    }
-}
 
         private void ShowError(string message, Exception ex)
         {

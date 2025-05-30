@@ -214,7 +214,7 @@
         <Frame x:Name="ProfileFrame" 
            Grid.Column="1" 
            VerticalAlignment="Bottom" 
-           Width="396" 
+           Width="396"
            HorizontalAlignment="Center" 
            Visibility="Collapsed"/>
     </Grid>

@@ -2,19 +2,12 @@
 using SimpleNoteNG.Controls;
 using SimpleNoteNG.Data;
 using SimpleNoteNG.Pages;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Drawing;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
 namespace SimpleNoteNG.Windows
 {
@@ -37,19 +30,37 @@ namespace SimpleNoteNG.Windows
             this.userId = userId;
             _audioEngine = new AudioEngine();
             _metronome = new Metronome(int.Parse(Tempo.Text));
+            _metronome.BeatChanged += Metronome_BeatChanged;
 
-            // Инициализация интерфейса
             InitializeMixerChannels(8);
             LoadPianoRoll();
         }
-
+        private void Metronome_BeatChanged(int beat)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                Beat1.Fill = beat == 1 ? System.Windows.Media.Brushes.Orange : System.Windows.Media.Brushes.Gray;
+                Beat2.Fill = beat == 2 ? System.Windows.Media.Brushes.Orange : System.Windows.Media.Brushes.Gray;
+                Beat3.Fill = beat == 3 ? System.Windows.Media.Brushes.Orange : System.Windows.Media.Brushes.Gray;
+                Beat4.Fill = beat == 4 ? System.Windows.Media.Brushes.Orange : System.Windows.Media.Brushes.Gray;
+            });
+        }
         private void LoadPianoRoll()
         {
             _pianoRoll = new PianoRoll(_audioEngine, _metronome); // Сохраняем объект в поле
             _pianoRoll.TimeUpdated += time => TimerDisplay.Text = time;
             MainFrame.Navigate(_pianoRoll);
         }
+        public void LoadProject(string filePath)
+        {
+            // Теперь просто делегируем работу PianoRoll
+            _pianoRoll.LoadMidiFile(filePath);
+        }
 
+        public void InitializeEmptyProject()
+        {
+            _pianoRoll.InitializeEmptyProject();
+        }
         private void InitializeMixerChannels(int count)
         {
             for (int i = 0; i < count; i++)
@@ -158,7 +169,30 @@ namespace SimpleNoteNG.Windows
 
         private void Metronome_Click(object sender, RoutedEventArgs e)
         {
+            _metronome?.Toggle();
+            // Визуальная индикация состояния
+            if (_metronome != null)
+            {
+                Metronome.Background = _metronome.IsEnabled
+                    ? new System.Windows.Media.SolidColorBrush(
+                        System.Windows.Media.Color.FromArgb(255, 207, 110, 0))
+                    : System.Windows.Media.Brushes.Transparent;
+            }
+        }
+        private void Tempo_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (int.TryParse(Tempo.Text, out int newTempo) && newTempo >= 20 && newTempo <= 300)
+            {
+                _metronome?.SetTempo(newTempo);
+                _pianoRoll?.SetTempo(newTempo);
 
+                // Обновляем метроном, если он активен
+                if (_metronome?.IsEnabled == true && _pianoRoll?.isPlaying == true)
+                {
+                    _metronome.Stop();
+                    _metronome.Start();
+                }
+            }
         }
     }
 }
