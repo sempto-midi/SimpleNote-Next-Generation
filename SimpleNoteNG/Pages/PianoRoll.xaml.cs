@@ -1,25 +1,17 @@
-﻿using NAudio.Midi;
-using NAudio.Wave.SampleProviders;
+﻿using NAudio.Lame;
+using NAudio.Midi;
 using NAudio.Wave;
-using NAudio.Lame;
+using NAudio.Wave.SampleProviders;
 using SimpleNoteNG.Audio;
-using System;
-using System.Collections.Generic;
+using SimpleNoteNG.Data;
+using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
-using System.Diagnostics;
 
 namespace SimpleNoteNG.Pages
 {
@@ -918,38 +910,28 @@ namespace SimpleNoteNG.Pages
         #endregion
 
         #region Export And Import Methods
-        public void ExportToMidi(string filePath)
+        public void ExportToMidi(string filePath, int projectId, int userId)
         {
             try
             {
-                const int ticksPerQuarterNote = 480; // Разрешение MIDI файла
-
-                // Создаем коллекцию MIDI событий (1 трек)
+                const int ticksPerQuarterNote = 480;
                 var midiEvents = new MidiEventCollection(1, ticksPerQuarterNote);
 
-                // Добавляем событие темпа (120 BPM)
+                // Добавляем событие темпа
                 midiEvents.AddEvent(new TempoEvent(500000, 0), 0);
 
-                // Сортируем ноты по времени начала
+                // Сортируем и добавляем ноты
                 var sortedNotes = createdRectangles
                     .OrderBy(rect => Canvas.GetLeft(rect))
                     .ToList();
 
-                // Конвертируем ноты в MIDI события
                 foreach (var rect in sortedNotes)
                 {
                     int midiNote = 60 + TotalKeys - 1 - (int)(Canvas.GetTop(rect) / KeyHeight);
-                    double left = Canvas.GetLeft(rect);
-                    double width = rect.Width;
+                    int startTime = (int)(Canvas.GetLeft(rect) / 100 * ticksPerQuarterNote * 4);
+                    int duration = (int)(rect.Width / 100 * ticksPerQuarterNote * 4);
 
-                    // Конвертируем позицию в тики (1 такт = 480 тиков)
-                    int startTime = (int)(left / 100 * ticksPerQuarterNote * 4); // 4 четверти в такте
-                    int duration = (int)(width / 100 * ticksPerQuarterNote * 4);
-
-                    // NoteOn событие (velocity = 90)
                     midiEvents.AddEvent(new NoteOnEvent(startTime, 1, midiNote, 90, 0), 0);
-
-                    // NoteOff событие
                     midiEvents.AddEvent(new NoteEvent(startTime + duration, 1, MidiCommandCode.NoteOff, midiNote, 0), 0);
                 }
 
@@ -959,15 +941,52 @@ namespace SimpleNoteNG.Pages
                     100;
                 midiEvents.AddEvent(new MetaEvent(MetaEventType.EndTrack, 0, endTime), 0);
 
-                // Экспортируем MIDI файл
+                // Экспортируем MIDI
                 MidiFile.Export(filePath, midiEvents);
 
-                MessageBox.Show("MIDI файл успешно экспортирован!", "Экспорт",
-                               MessageBoxButton.OK, MessageBoxImage.Information);
+                // Обновляем информацию о проекте в БД
+                UpdateProjectInDatabase(filePath, projectId, userId);
+
+                MessageBox.Show("MIDI файл успешно экспортирован и проект обновлён!",
+                               "Экспорт", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка при экспорте MIDI: {ex.Message}", "Ошибка",
+                MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка",
+                               MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void UpdateProjectInDatabase(string filePath, int projectId, int userId)
+        {
+            try
+            {
+                using (var context = new AppDbContext())
+                {
+                    // Получаем проект из БД
+                    var project = context.Projects
+                        .FirstOrDefault(p => p.ProjectId == projectId && p.UserId == userId);
+
+                    if (project != null)
+                    {
+                        // Обновляем данные проекта
+                        project.ProjectName = System.IO.Path.GetFileNameWithoutExtension(filePath);
+                        project.Path = filePath;
+                        project.UpdatedAt = DateTime.Now;
+
+                        // Сохраняем изменения
+                        context.SaveChanges();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Проект не найден в базе данных", "Ошибка",
+                                       MessageBoxButton.OK, MessageBoxImage.Warning);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при обновлении проекта: {ex.Message}", "Ошибка",
                                MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }

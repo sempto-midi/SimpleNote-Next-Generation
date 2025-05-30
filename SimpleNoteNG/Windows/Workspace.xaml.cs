@@ -123,7 +123,7 @@ namespace SimpleNoteNG.Windows
 
             if (saveDialog.ShowDialog() == true)
             {
-                _pianoRoll.ExportToMidi(saveDialog.FileName);
+                _pianoRoll.ExportToMidi(saveDialog.FileName, projectId, userId);
             }
         }
 
