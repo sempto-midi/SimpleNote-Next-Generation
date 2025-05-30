@@ -57,7 +57,6 @@ namespace SimpleNoteNG.Pages
                 ViewModePanel.Visibility = Visibility.Collapsed;
                 EditModePanel.Visibility = Visibility.Visible;
                 EditSaveButton.Content = "Save";
-                PasswordChangePanel.Visibility = Visibility.Collapsed;
                 _isChangingPassword = false;
             }
             else
@@ -69,7 +68,7 @@ namespace SimpleNoteNG.Pages
                     _isEditing = false;
                     ViewModePanel.Visibility = Visibility.Visible;
                     EditModePanel.Visibility = Visibility.Collapsed;
-                    EditSaveButton.Content = "Edit";
+                    EditSaveButton.Content = Image.SourceProperty;
                 }
             }
         }
@@ -88,34 +87,6 @@ namespace SimpleNoteNG.Pages
             {
                 MessageBox.Show("Please enter a valid email address", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
-            }
-
-            // Если меняется пароль
-            if (_isChangingPassword)
-            {
-                if (string.IsNullOrWhiteSpace(CurrentPasswordBox.Password))
-                {
-                    MessageBox.Show("Please enter your current password", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return false;
-                }
-
-                if (string.IsNullOrWhiteSpace(NewPasswordBox.Password))
-                {
-                    MessageBox.Show("Please enter a new password", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return false;
-                }
-
-                if (NewPasswordBox.Password != ConfirmPasswordBox.Password)
-                {
-                    MessageBox.Show("New passwords do not match", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return false;
-                }
-
-                if (NewPasswordBox.Password.Length < 6)
-                {
-                    MessageBox.Show("Password must be at least 6 characters long", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return false;
-                }
             }
 
             return true;
@@ -149,21 +120,6 @@ namespace SimpleNoteNG.Pages
                             UpdateEmailStatusText();
                         }
 
-                        // Обновляем пароль, если он был изменен
-                        if (_isChangingPassword)
-                        {
-                            // Проверяем текущий пароль
-                            if (VerifyPassword(user, CurrentPasswordBox.Password))
-                            {
-                                user.PasswordHash = HashPassword(NewPasswordBox.Password);
-                            }
-                            else
-                            {
-                                MessageBox.Show("Current password is incorrect", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                                return;
-                            }
-                        }
-
                         db.SaveChanges();
                         MessageBox.Show("Changes saved successfully", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
@@ -173,26 +129,6 @@ namespace SimpleNoteNG.Pages
             {
                 MessageBox.Show($"Error saving changes: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
-        }
-
-        private bool VerifyPassword(User user, string password)
-        {
-            // Реализуйте проверку пароля (сравнение хэшей)
-            // Это упрощенный пример - в реальном приложении используйте безопасное хэширование
-            return user.PasswordHash == HashPassword(password);
-        }
-
-        private string HashPassword(string password)
-        {
-            // Реализуйте безопасное хэширование пароля
-            // Это упрощенный пример - используйте PBKDF2, bcrypt или аналоги
-            return password; // В реальном приложении НЕ храните пароли в открытом виде!
-        }
-
-        private void ChangePasswordButton_Click(object sender, RoutedEventArgs e)
-        {
-            _isChangingPassword = !_isChangingPassword;
-            PasswordChangePanel.Visibility = _isChangingPassword ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private void DeleteButton_Click(object sender, RoutedEventArgs e)

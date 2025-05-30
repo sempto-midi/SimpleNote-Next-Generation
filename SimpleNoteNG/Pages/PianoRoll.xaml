@@ -7,7 +7,6 @@
       mc:Ignorable="d" Background="#FF333333"
       d:DesignHeight="800" d:DesignWidth="1200" FontFamily="{DynamicResource Kode-Medium}"
       Title="PianoRoll">
-
     <Page.Resources>
         <!-- Стиль для горизонтального ScrollBar -->
         <Style x:Key="HorizontalScrollBar" TargetType="{x:Type ScrollBar}">
@@ -36,79 +35,45 @@
             </Setter>
         </Style>
     </Page.Resources>
-
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <!-- Для TaktNumbersPanel -->
+            <RowDefinition Height="Auto"/>
             <RowDefinition/>
-            <!-- Для основной области -->
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition/>
         </Grid.ColumnDefinitions>
 
-        <!-- Панель с нотами слева -->
-        <ScrollViewer x:Name="LeftScrollViewer" Grid.Column="0" Grid.Row="1" VerticalScrollBarVisibility="Hidden"
-                      HorizontalScrollBarVisibility="Disabled" ScrollChanged="LeftScrollViewer_ScrollChanged"
+        <StackPanel x:Name="ToolPanel" Grid.ColumnSpan="2" Orientation="Horizontal" 
+                    Background="#FF333333" Height="40"/>
+
+        <ScrollViewer x:Name="LeftScrollViewer" Grid.Column="0" Grid.Row="2" 
+                      VerticalScrollBarVisibility="Hidden"
+                      HorizontalScrollBarVisibility="Disabled"
+                      ScrollChanged="LeftScrollViewer_ScrollChanged"
                       Background="White">
-            <StackPanel x:Name="PianoKeysPanel" Width="50" Background="#333333" Height="1220" Margin="0 0 0 0"/>
+            <StackPanel x:Name="PianoKeysPanel" Width="50" Background="#333333"/>
         </ScrollViewer>
 
-        <!-- Панель с номерами тактов -->
         <ScrollViewer x:Name="TaktNumbersScrollViewer" Grid.Column="1" Grid.Row="0" HorizontalScrollBarVisibility="Hidden"
                       VerticalScrollBarVisibility="Disabled" ScrollChanged="TaktNumbersScrollViewer_ScrollChanged">
-            <StackPanel x:Name="TaktNumbersPanel" Orientation="Horizontal" Height="30" Background="#FF333333">
-                <!-- Номера тактов будут добавлены здесь -->
-            </StackPanel>
+            <StackPanel x:Name="TaktNumbersPanel" Orientation="Horizontal" Height="30" Background="#FF333333"/>
         </ScrollViewer>
 
-        <!-- Основная область Piano Roll -->
-        <ScrollViewer x:Name="MainScrollViewer" Grid.Column="1" Grid.Row="1"
-              VerticalScrollBarVisibility="Hidden"
-              HorizontalScrollBarVisibility="Auto"
-              ScrollChanged="MainScrollViewer_ScrollChanged">
-
-            <!-- Ресурсы с определением стиля -->
-            <ScrollViewer.Resources>
-                <!-- Общий стиль для ScrollBar -->
-                <Style TargetType="{x:Type ScrollBar}">
-                    <Style.Triggers>
-                        <!-- Стиль только для горизонтального ScrollBar -->
-                        <Trigger Property="Orientation" Value="Horizontal">
-                            <Setter Property="Height" Value="10"/>
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="{x:Type ScrollBar}">
-                                        <Grid>
-                                            <Track x:Name="PART_Track">
-                                                <Track.Thumb>
-                                                    <Thumb>
-                                                        <Thumb.Template>
-                                                            <ControlTemplate TargetType="{x:Type Thumb}">
-                                                                <Border CornerRadius="5" 
-                                                                Background="#666666"
-                                                                Margin="0,2,0,2"/>
-                                                            </ControlTemplate>
-                                                        </Thumb.Template>
-                                                    </Thumb>
-                                                </Track.Thumb>
-                                            </Track>
-                                        </Grid>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
-            </ScrollViewer.Resources>
-
-            <Canvas x:Name="PianoRollCanvas" Background="#222222" Height="1220" Width="20000"
-            MouseLeftButtonDown="PianoRollCanvas_MouseLeftButtonDown"
-            MouseMove="PianoRollCanvas_MouseMove"
-            MouseLeftButtonUp="PianoRollCanvas_MouseLeftButtonUp">
-                <!-- Разлиновка по тактам и клавишам -->
+        <ScrollViewer x:Name="MainScrollViewer" Grid.Column="1" Grid.Row="2"
+                      VerticalScrollBarVisibility="Hidden"
+                      HorizontalScrollBarVisibility="Auto"
+                      ScrollChanged="MainScrollViewer_ScrollChanged">
+            <Canvas x:Name="PianoRollCanvas" Background="#222222"
+                    Width="{Binding ActualWidth, ElementName=MainScrollViewer}"
+                    Height="{Binding ActualHeight, ElementName=MainScrollViewer}"
+                    ClipToBounds="True"
+                    MouseLeftButtonDown="PianoRollCanvas_MouseLeftButtonDown"
+                    MouseMove="PianoRollCanvas_MouseMove"
+                    MouseLeftButtonUp="PianoRollCanvas_MouseLeftButtonUp"
+                    MouseRightButtonDown="PianoRollCanvas_MouseRightButtonDown">
             </Canvas>
         </ScrollViewer>
     </Grid>

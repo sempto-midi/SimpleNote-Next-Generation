@@ -8,11 +8,16 @@
     <UseWPF>true</UseWPF>
     <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
     <ApplicationIcon>Images\icon.ico</ApplicationIcon>
+    <StartupObject></StartupObject>
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Fonts\KodeMono-Medium.ttf" />
     <None Remove="Fonts\KodeMono-SemiBold.ttf" />
     <None Remove="Images\Create_Block.png" />
+    <None Remove="Images\Delete_Button.png" />
+    <None Remove="Images\Edit_Button.png" />
+    <None Remove="Images\Exit_Button.png" />
     <None Remove="Images\logo.png" />
     <None Remove="Images\Metronome.png" />
     <None Remove="Images\Pause_Button.png" />
@@ -45,8 +50,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="Fonts\KodeMono-Medium.ttf" />
     <Resource Include="Fonts\KodeMono-SemiBold.ttf" />
     <Resource Include="Images\Create_Block.png" />
+    <Resource Include="Images\Delete_Button.png" />
+    <Resource Include="Images\Edit_Button.png" />
+    <Resource Include="Images\Exit_Button.png" />
     <Resource Include="Images\logo.png" />
     <Resource Include="Images\Metronome.png" />
     <Resource Include="Images\Pause_Button.png" />

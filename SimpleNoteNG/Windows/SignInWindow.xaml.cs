@@ -86,5 +86,32 @@ namespace SimpleNoteNG.Windows
                 projWin.Show();
             }
         }
+
+        private void Hyperlink_Click(object sender, RoutedEventArgs e)
+        {
+            string username = txtUsername.Text.Trim();
+
+            if (string.IsNullOrEmpty(username))
+            {
+                var msg = new ModalBox(this, "Please enter your username first");
+                msg.ShowDialog();
+                return;
+            }
+
+            using (var context = new AppDbContext())
+            {
+                var user = context.Users.FirstOrDefault(u => u.Username == username);
+                if (user == null)
+                {
+                    var msg = new ModalBox(this, "User not found");
+                    msg.ShowDialog();
+                    return;
+                }
+
+                var forgotPasswordWindow = new ForgotPasswordWindow(user.Username, user.Email, user.UserId);
+                forgotPasswordWindow.Show();
+                this.Close();
+            }
+        }
     }
 }

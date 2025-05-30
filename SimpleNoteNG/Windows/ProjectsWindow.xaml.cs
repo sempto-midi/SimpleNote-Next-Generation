@@ -293,31 +293,50 @@ namespace SimpleNoteNG.Windows
         }
 
         private void Create_Click(object sender, RoutedEventArgs e)
+{
+    try
+    {
+        using (var db = new AppDbContext())
         {
-            try
+            // Получаем список всех существующих проектов с именами, начинающимися на "New Project"
+            var existingProjects = db.Projects
+                .Where(p => p.ProjectName.StartsWith("New Project"))
+                .ToList();
+
+            // Находим максимальный номер в существующих проектах
+            int maxNumber = 0;
+            foreach (var project in existingProjects)
             {
-                using (var db = new AppDbContext())
+                if (int.TryParse(project.ProjectName.Replace("New Project", "").Trim(), out int number))
                 {
-                    var newProject = new Project
-                    {
-                        UserId = _userId,
-                        ProjectName = "New Project",
-                        CreatedAt = DateTime.Now,
-                        UpdatedAt = DateTime.Now,
-                        Path = ""
-                    };
-
-                    db.Projects.Add(newProject);
-                    db.SaveChanges();
-
-                    OpenWorkspace(newProject.ProjectId);
+                    if (number > maxNumber)
+                        maxNumber = number;
                 }
             }
-            catch (Exception ex)
+
+            // Создаем новое имя проекта с номером на 1 больше максимального
+            string newProjectName = $"New Project {maxNumber + 1}";
+
+            var newProject = new Project
             {
-                ShowError("Error creating project", ex);
-            }
+                UserId = _userId,
+                ProjectName = newProjectName,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now,
+                Path = ""
+            };
+
+            db.Projects.Add(newProject);
+            db.SaveChanges();
+
+            OpenWorkspace(newProject.ProjectId);
         }
+    }
+    catch (Exception ex)
+    {
+        ShowError("Error creating project", ex);
+    }
+}
 
         private void ShowError(string message, Exception ex)
         {

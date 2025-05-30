@@ -10,6 +10,26 @@
         <FontFamily x:Key="Kode-Regular">pack://application:,,,/Fonts/KodeMono-Regular.ttf#Kode Mono Regular</FontFamily>
         <FontFamily x:Key="Kode-Medium">pack://application:,,,/Fonts/KodeMono-Regular.ttf#Kode Mono Medium</FontFamily>
 
+        <Style x:Key="ConfirmTextBoxes" TargetType="{x:Type TextBox}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="White"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+
+            <!-- Триггер для наведения курсора -->
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="BorderBrush" Value="#FFCF6E00"/>
+                </Trigger>
+
+                <!-- Триггер для фокуса -->
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter Property="BorderBrush" Value="#FFCF6E00"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <!--Hover для кнопок сворачивания и закрытия окон-->
         <Style x:Key="CloseMinimizeButtonsHover" TargetType="{x:Type Button}">
             <Setter Property="Background" Value="Transparent"/>
@@ -116,9 +136,6 @@
 
                         <!-- Логика отображения плейсхолдера -->
                         <ControlTemplate.Triggers>
-                            <!-- Показывать плейсхолдер ТОЛЬКО когда:
-                 1. Пароль пустой (через триггер на IsEnabled)
-                 2. Нет фокуса ввода -->
                             <MultiTrigger>
                                 <MultiTrigger.Conditions>
                                     <Condition Property="IsEnabled" Value="True"/>
@@ -139,10 +156,7 @@
 
         <!-- Стиль для клавиш пианино -->
         <Style x:Key="PianoKeyStyle" TargetType="Button">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="Foreground" Value="Black"/>
-            <Setter Property="BorderBrush" Value="Gray"/>
-            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderThickness" Value="0.5"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Margin" Value="0"/>
             <Setter Property="FontSize" Value="12"/>
@@ -153,18 +167,17 @@
                     <ControlTemplate TargetType="Button">
                         <Border Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}">
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="0,5,5,0">
                             <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                    VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                         </Border>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
             <Style.Triggers>
-                <!-- Стиль для черных клавиш (диезов) -->
-                <Trigger Property="Content" Value="#">
-                    <Setter Property="Background" Value="Black"/>
-                    <Setter Property="Foreground" Value="White"/>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#FFDDDDDD"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
