@@ -4,11 +4,31 @@
              xmlns:local="clr-namespace:SimpleNoteNG"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-        
+
         <!--Шрифт приложения-->
         <FontFamily x:Key="Kode">pack://application:,,,/Fonts/KodeMono-SemiBold.ttf#Kode Mono SemiBold</FontFamily>
         <FontFamily x:Key="Kode-Regular">pack://application:,,,/Fonts/KodeMono-Regular.ttf#Kode Mono Regular</FontFamily>
         <FontFamily x:Key="Kode-Medium">pack://application:,,,/Fonts/KodeMono-Regular.ttf#Kode Mono Medium</FontFamily>
+
+        <!-- Шаблон для клавиш пианино -->
+        <ControlTemplate x:Key="PianoKeyControlTemplate" TargetType="Button">
+            <Border x:Name="border" 
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="0,5,5,0">
+                <ContentPresenter HorizontalAlignment="Center" 
+                                VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="border" Property="Background" Value="#FFDDDDDD"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter TargetName="border" Property="Background" Value="#FFCF6E00"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
 
         <Style x:Key="ConfirmTextBoxes" TargetType="{x:Type TextBox}">
             <Setter Property="Background" Value="Transparent"/>
