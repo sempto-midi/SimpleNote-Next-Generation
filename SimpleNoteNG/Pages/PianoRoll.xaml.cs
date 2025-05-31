@@ -1146,69 +1146,56 @@ namespace SimpleNoteNG.Pages
                 selectedNotes.Clear();
 
                 var midiFile = new MidiFile(filePath);
-                int ppq = midiFile.DeltaTicksPerQuarterNote;
+                int ticksPerQuarterNote = midiFile.DeltaTicksPerQuarterNote;
 
-                var activeNotes = new Dictionary<int, NoteOnEvent>();
-                var notePairs = new List<(NoteOnEvent NoteOn, long NoteOffTime)>();
+                var noteEvents = new List<(int Note, long Start, long End)>();
 
-                // Добавлена проверка на null треки
+                // Собираем все ноты из всех треков
                 for (int track = 0; track < midiFile.Tracks; track++)
                 {
-                    var trackEvents = midiFile.Events[track];
-                    if (trackEvents == null) continue;
+                    var events = midiFile.Events[track];
+                    var activeNotes = new Dictionary<int, NoteOnEvent>();
 
-                    foreach (var midiEvent in trackEvents)
+                    foreach (var midiEvent in events)
                     {
-                        if (midiEvent is NoteOnEvent noteOnEvent)
+                        if (midiEvent is NoteOnEvent noteOnEvent && noteOnEvent.Velocity > 0)
                         {
-                            if (noteOnEvent.Velocity > 0)
-                            {
-                                activeNotes[noteOnEvent.NoteNumber] = noteOnEvent;
-                            }
-                            else if (activeNotes.TryGetValue(noteOnEvent.NoteNumber, out var startedNote))
-                            {
-                                notePairs.Add((startedNote, noteOnEvent.AbsoluteTime));
-                                activeNotes.Remove(noteOnEvent.NoteNumber);
-                            }
+                            activeNotes[noteOnEvent.NoteNumber] = noteOnEvent;
                         }
-                        else if (midiEvent.CommandCode == MidiCommandCode.NoteOff)
+                        else if (midiEvent is NoteEvent noteOffEvent &&
+                                (noteOffEvent.CommandCode == MidiCommandCode.NoteOff ||
+                                 (noteOffEvent is NoteOnEvent zeroVelNoteOn && zeroVelNoteOn.Velocity == 0)))
                         {
-                            var noteOffEvent = (NoteEvent)midiEvent;
                             if (activeNotes.TryGetValue(noteOffEvent.NoteNumber, out var startedNote))
                             {
-                                notePairs.Add((startedNote, noteOffEvent.AbsoluteTime));
+                                noteEvents.Add((noteOffEvent.NoteNumber, startedNote.AbsoluteTime, noteOffEvent.AbsoluteTime));
                                 activeNotes.Remove(noteOffEvent.NoteNumber);
                             }
                         }
                     }
                 }
 
-                // Очищаем "висячие" NoteOn-события (без NoteOff)
-                activeNotes.Clear();
-
-                if (!notePairs.Any())
+                if (!noteEvents.Any())
                 {
-                    MessageBox.Show("No notes found in MIDI file", "Info",
-                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show("В MIDI файле не найдено нот", "Информация",
+                                  MessageBoxButton.OK, MessageBoxImage.Information);
                     return;
                 }
 
-                long minTime = notePairs.Min(p => p.NoteOn.AbsoluteTime);
+                // Находим минимальное время для нормализации
+                long minTime = noteEvents.Min(n => n.Start);
 
-                foreach (var (noteOn, noteOffTime) in notePairs)
+                // Импортируем ноты
+                foreach (var (note, start, end) in noteEvents)
                 {
-                    double startTime = (noteOn.AbsoluteTime - minTime) / (double)ppq;
-                    double duration = (noteOffTime - noteOn.AbsoluteTime) / (double)ppq;
+                    // Конвертируем из тиков в позиции piano roll (1 такт = 4 четверти = 100px)
+                    double startPos = (start - minTime) / (double)(ticksPerQuarterNote * 4) * 100;
+                    double duration = (end - start) / (double)(ticksPerQuarterNote * 4) * 100;
 
-                    // Более безопасное вычисление keyIndex
-                    int keyIndex = noteOn.NoteNumber - LowestNote; // LowestNote должно быть 60 для C4
-                    if (keyIndex < 0 || keyIndex >= TotalKeys)
-                    {
-                        continue; // Пропускаем ноты вне диапазона
-                    }
+                    // Проверяем диапазон нот
+                    int keyIndex = note - LowestNote;
+                    if (keyIndex < 0 || keyIndex >= TotalKeys) continue;
 
-                    double left = startTime * 100;
-                    double width = duration * 100;
                     double top = (TotalKeys - 1 - keyIndex) * KeyHeight;
 
                     var rect = new Rectangle
@@ -1216,10 +1203,11 @@ namespace SimpleNoteNG.Pages
                         Stroke = Brushes.Green,
                         Fill = new SolidColorBrush(Color.FromArgb(128, 0, 255, 0)),
                         StrokeThickness = 1,
-                        Width = width,
+                        Width = duration,
                         Height = KeyHeight
                     };
-                    Canvas.SetLeft(rect, left);
+
+                    Canvas.SetLeft(rect, startPos);
                     Canvas.SetTop(rect, top);
                     PianoRollCanvas.Children.Add(rect);
                     createdRectangles.Add(rect);
@@ -1236,8 +1224,8 @@ namespace SimpleNoteNG.Pages
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"MIDI import error: {ex.Message}", "Error",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Ошибка импорта MIDI: {ex.Message}", "Ошибка",
+                              MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
         #endregion
