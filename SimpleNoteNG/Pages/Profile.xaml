@@ -90,7 +90,8 @@
                 </StackPanel>
             </ScrollViewer>
             <StackPanel Grid.Row="2" Margin="0,0,0,20" HorizontalAlignment="Center">
-                <Button x:Name="btnConfirm" Content="Confirm Email" Background="#FFCF6E09" Height="25" Click="btnConfirm_Click">
+                <Button x:Name="btnConfirm" Content="Confirm Email" Style="{DynamicResource OrangeButtonsHover}"
+                        Cursor="Hand" Height="25" Click="btnConfirm_Click">
                     <Button.Resources>
                         <Style TargetType="{x:Type Border}">
                             <Setter Property="CornerRadius" Value="3"/>
@@ -100,24 +101,42 @@
                 <!-- Кнопки действий -->
                 <StackPanel Orientation="Horizontal">
                     <Button x:Name="DeleteButton"
-                    Background="Transparent" BorderBrush="Transparent"
+                    Cursor="Hand" Style="{DynamicResource CloseMinimizeButtonsHover}"
                     Margin="5" Width="40" Height="40"
+                    Content="Del"
+                    Foreground="Red"
                     Click="DeleteButton_Click">
-                        <Image Source="../Images/Delete_Button.png" Width="20"/>
+                        <Button.Resources>
+                            <Style TargetType="{x:Type Border}">
+                                <Setter Property="CornerRadius" Value="3"/>
+                            </Style>
+                        </Button.Resources>
                     </Button>
 
                     <Button x:Name="EditSaveButton"
                     Cursor="Hand" Style="{DynamicResource CloseMinimizeButtonsHover}"
-                    Margin="5" Width="40" Height="40"
+                    Foreground="White"
+                    Content="Edit" FontSize="15"
+                    Margin="5" Width="45" Height="45"
                     Click="EditSaveButton_Click">
-                        <Image Source="../Images/Edit_Button.png" Width="30"/>
+                        <Button.Resources>
+                            <Style TargetType="{x:Type Border}">
+                                <Setter Property="CornerRadius" Value="3"/>
+                            </Style>
+                        </Button.Resources>
                     </Button>
 
                     <Button x:Name="LogoutButton"
-                    Background="Transparent" BorderBrush="Transparent"
+                    Style="{DynamicResource CloseMinimizeButtonsHover}"
+                    Cursor="Hand"
                     Margin="5" Width="40" Height="40"
-                    Click="LogoutButton_Click">
-                        <Image Source="../Images/Exit_Button.png" Width="20"/>
+                    Content="Exit"
+                    Click="LogoutButton_Click" Foreground="#FFCF6E00">
+                        <Button.Resources>
+                            <Style TargetType="{x:Type Border}">
+                                <Setter Property="CornerRadius" Value="3"/>
+                            </Style>
+                        </Button.Resources>
                     </Button>
                 </StackPanel>
             </StackPanel>

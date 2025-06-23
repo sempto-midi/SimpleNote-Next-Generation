@@ -77,7 +77,7 @@ namespace SimpleNoteNG.Pages
                     _isEditing = false;
                     ViewModePanel.Visibility = Visibility.Visible;
                     EditModePanel.Visibility = Visibility.Collapsed;
-                    EditSaveButton.Content = Image.SourceProperty;
+                    EditSaveButton.Content = "Edit";
                 }
             }
         }

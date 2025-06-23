@@ -389,11 +389,13 @@ namespace SimpleNoteNG.Windows
             {
                 _pianoRoll.StopRecording();
                 RecordButton.Background = new SolidColorBrush(Color.FromRgb(0x2B, 0x2B, 0x2B)); // Темно-серый
+                RecordEllipse.Fill = Brushes.Red;
             }
             else
             {
                 _pianoRoll.StartRecording();
-                RecordButton.Background = Brushes.Green; // Индикация активной записи
+                RecordButton.Background = Brushes.Red; // Индикация активной записи
+                RecordEllipse.Fill = new SolidColorBrush(Color.FromRgb(0x2B, 0x2B, 0x2B));
             }
         }
     }

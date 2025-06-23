@@ -19,7 +19,6 @@
     </WindowChrome.WindowChrome>
 
     <Grid>
-
         <!--Блок закрытия и сворачивания приложения-->
         <StackPanel Grid.Column="2" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,10,0,0" Orientation="Horizontal" 
             Background="#FF252525" Width="130" Height="40">
@@ -68,9 +67,10 @@
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="150"/>
-                        <RowDefinition/>
-                        <RowDefinition/>
-                        <RowDefinition/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <StackPanel Orientation="Horizontal" Grid.Row="0" HorizontalAlignment="Center" Margin="0,115,0,0">
@@ -78,7 +78,7 @@
                         <TextBlock Text=" In" Foreground="#FFCF6E00" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="36"/>
                     </StackPanel>
                     
-                    <TextBox x:Name="txtUsername" Grid.Row="1" Margin="20,20,20,10" Height="60" Width="400"
+                    <TextBox x:Name="txtUsername" Grid.Row="1" Margin="20,20,20,0" Height="60" Width="400"
                         Background="#FFD4D4D4" SelectionBrush="#FFCF6E00" SelectionTextBrush="#FF464646" FontSize="30"
                         HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
                         Style="{DynamicResource PlaceholderTextBoxStyle}"
@@ -90,7 +90,7 @@
                             </Style>
                         </TextBox.Resources>
                     </TextBox>
-                    <PasswordBox x:Name="pswPassword" Grid.Row="2" Margin="20,15,20,15" Width="400" Height="60" Background="#FFD4D4D4"
+                    <PasswordBox x:Name="pswPassword" Grid.Row="2" Margin="20,20,20,0" Width="400" Height="60" Background="#FFD4D4D4"
                         Tag="password" SelectionTextBrush="#FF464646" SelectionBrush="#FFCF6E00" FontSize="30"
                         VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
                         PasswordChar="*" Style="{DynamicResource ModernPasswordBoxStyle}"
@@ -100,7 +100,7 @@
                             <!-- Подключаем Behavior -->
                         </i:Interaction.Behaviors>
                     </PasswordBox>
-                    <Button x:Name="btnSignIn" Grid.Row="3" Margin="20,15,20,15" Height="60" Width="400"
+                    <Button x:Name="btnSignIn" Grid.Row="3" Margin="20,20,20,0" Height="60" Width="400"
                         Content="sign in" FontSize="30" Foreground="White" Cursor="Hand"
                         Style="{DynamicResource OrangeButtonsHover}"
                         Click="btnSignIn_Click">
@@ -110,7 +110,7 @@
                             </Style>
                         </Button.Resources>
                     </Button>
-                    <TextBlock Grid.Row="3" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,-10">
+                    <TextBlock Grid.Row="4" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,15,0,0">
                         <Hyperlink Foreground="White" Click="Hyperlink_Click">forgot password?</Hyperlink>
                     </TextBlock>
                 </Grid>

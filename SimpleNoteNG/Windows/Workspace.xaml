@@ -159,10 +159,10 @@
                     </Button.Resources>
                 </Button>
                 <Button x:Name="RecordButton" Margin="20,0,0,0" Width="30" Height="30" Cursor="Hand"
-                        Style="{StaticResource GrayHoverStyle}"
+                        Style="{StaticResource CloseMinimizeButtonsHover}"
                         Background="#FF2B2B2B"
                         Click="RecordButton_Click">
-                    <Ellipse Fill="Red" Width="10" Height="10"/>
+                    <Ellipse x:Name="RecordEllipse" Fill="Red" Width="10" Height="10"/>
                     <Button.Resources>
                         <Style TargetType="Border">
                             <Setter Property="CornerRadius" Value="100"/>
@@ -170,7 +170,8 @@
                     </Button.Resources>
                 </Button>
                 <Button x:Name="Metronome" Margin="20,0,0,0" Width="30" Height="30"
-                    Click="Metronome_Click" Cursor="Hand">
+                    Click="Metronome_Click" Cursor="Hand"
+                    Style="{DynamicResource CloseMinimizeButtonsHover}">
                     <Image Source="../Images/Metronome.png" Width="15"/>
                     <Button.Resources>
                         <Style TargetType="Border">
