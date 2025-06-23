@@ -165,6 +165,22 @@
                 </TextBox.Resources>
             </TextBox>
         </StackPanel>
+        
+        <StackPanel Orientation="Horizontal" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,20,0,0">
+                <Button x:Name="btnResend" Content="Resend code" 
+                Foreground="#FFCF6E00" Background="Transparent" 
+                BorderBrush="#FFCF6E00" BorderThickness="1" 
+                FontSize="20" Padding="15,5" Cursor="Hand"
+                Click="BtnResend_Click">
+                <Button.Resources>
+                    <Style TargetType="{x:Type Border}">
+                        <Setter Property="CornerRadius" Value="5"/>
+                    </Style>
+                </Button.Resources>
+            </Button>
+            <TextBlock x:Name="txtTimer" Foreground="#FF8C8C8C" FontSize="20" 
+               Margin="20,0,0,0" VerticalAlignment="Center"/>
+        </StackPanel>
 
     </Grid>
 </Window>

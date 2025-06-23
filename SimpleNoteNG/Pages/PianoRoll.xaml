@@ -6,35 +6,7 @@
       xmlns:local="clr-namespace:SimpleNoteNG.Pages"
       mc:Ignorable="d" Background="#FF333333"
       d:DesignHeight="800" d:DesignWidth="1200" FontFamily="{DynamicResource Kode-Medium}"
-      Title="PianoRoll">
-    <Page.Resources>
-        <!-- Стиль для горизонтального ScrollBar -->
-        <Style x:Key="HorizontalScrollBar" TargetType="{x:Type ScrollBar}">
-            <Setter Property="Height" Value="8"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type ScrollBar}">
-                        <Grid>
-                            <Track x:Name="PART_Track">
-                                <Track.Thumb>
-                                    <Thumb>
-                                        <Thumb.Template>
-                                            <ControlTemplate TargetType="{x:Type Thumb}">
-                                                <Border 
-                                                    CornerRadius="4" 
-                                                    Background="#888888"
-                                                    Margin="0,1"/>
-                                            </ControlTemplate>
-                                        </Thumb.Template>
-                                    </Thumb>
-                                </Track.Thumb>
-                            </Track>
-                        </Grid>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </Page.Resources>
+      Title="PianoRoll" KeyDown="PianoRoll_KeyDown" Focusable="True">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -45,10 +17,7 @@
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition/>
         </Grid.ColumnDefinitions>
-
-        <StackPanel x:Name="ToolPanel" Grid.ColumnSpan="2" Orientation="Horizontal" 
-                    Background="#FF333333" Height="40"/>
-
+        
         <ScrollViewer x:Name="LeftScrollViewer" Grid.Column="0" Grid.Row="2" 
                       VerticalScrollBarVisibility="Hidden"
                       HorizontalScrollBarVisibility="Disabled"
@@ -63,17 +32,43 @@
         </ScrollViewer>
 
         <ScrollViewer x:Name="MainScrollViewer" Grid.Column="1" Grid.Row="2"
-                      VerticalScrollBarVisibility="Hidden"
-                      HorizontalScrollBarVisibility="Auto"
-                      ScrollChanged="MainScrollViewer_ScrollChanged">
+              VerticalScrollBarVisibility="Hidden"
+              HorizontalScrollBarVisibility="Auto"
+              ScrollChanged="MainScrollViewer_ScrollChanged">
+            <ScrollViewer.Resources>
+                <Style TargetType="{x:Type ScrollBar}">
+                    <Setter Property="Height" Value="8"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="{x:Type ScrollBar}">
+                                <Grid>
+                                    <Track x:Name="PART_Track">
+                                        <Track.Thumb>
+                                            <Thumb>
+                                                <Thumb.Template>
+                                                    <ControlTemplate TargetType="{x:Type Thumb}">
+                                                        <Border 
+                                                    CornerRadius="4" 
+                                                    Background="#888888"
+                                                    Margin="0,1"/>
+                                                    </ControlTemplate>
+                                                </Thumb.Template>
+                                            </Thumb>
+                                        </Track.Thumb>
+                                    </Track>
+                                </Grid>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </ScrollViewer.Resources>
             <Canvas x:Name="PianoRollCanvas" Background="#222222"
-                    Width="{Binding ActualWidth, ElementName=MainScrollViewer}"
-                    Height="{Binding ActualHeight, ElementName=MainScrollViewer}"
-                    ClipToBounds="True"
-                    MouseLeftButtonDown="PianoRollCanvas_MouseLeftButtonDown"
-                    MouseMove="PianoRollCanvas_MouseMove"
-                    MouseLeftButtonUp="PianoRollCanvas_MouseLeftButtonUp"
-                    MouseRightButtonDown="PianoRollCanvas_MouseRightButtonDown">
+            Width="{Binding ActualWidth, ElementName=MainScrollViewer}"
+            Height="{Binding ActualHeight, ElementName=MainScrollViewer}"
+            ClipToBounds="True"
+            MouseMove="PianoRollCanvas_MouseMove"
+            MouseLeftButtonUp="PianoRollCanvas_MouseLeftButtonUp"
+            MouseRightButtonDown="PianoRollCanvas_MouseRightButtonDown">
             </Canvas>
         </ScrollViewer>
     </Grid>

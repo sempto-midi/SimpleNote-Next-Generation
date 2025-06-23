@@ -35,6 +35,15 @@ namespace SimpleNoteNG.Pages
 
             DataContext = this;
             UpdateEmailStatusText();
+
+            using(var db = new AppDbContext())
+            {
+                var user = db.Users.FirstOrDefault(u => u.UserId == _userId);
+                if(user.EmailConfirmed == true)
+                {
+                    btnConfirm.Visibility = Visibility.Collapsed;
+                }
+            }
         }
 
         private void UpdateEmailStatusText()
@@ -157,6 +166,18 @@ namespace SimpleNoteNG.Pages
                 var parentWindow = Window.GetWindow(this) as ProjectsWindow;
                 parentWindow?.Logout();
             }
+        }
+
+        private void btnConfirm_Click(object sender, RoutedEventArgs e)
+        {
+            string username = UsernameEditBox.Text;
+            string email = EmailEditBox.Text;
+
+            var confwin = new ConfirmEmail(username, email, _userId);
+            confwin.Show();
+
+            var parentWin = new ProjectsWindow(username, _userId);
+            parentWin.Close();
         }
     }
 

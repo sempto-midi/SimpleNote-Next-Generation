@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using NAudio.Midi;
 using SimpleNoteNG.Data;
 using SimpleNoteNG.Models;
 using SimpleNoteNG.Pages;
@@ -38,6 +39,21 @@ namespace SimpleNoteNG.Windows
 
             // Добавляем обработчик для кнопки Upload
             Upload.Click += Upload_Click;
+
+            using (var db = new AppDbContext())
+            {
+                var user = db.Users.FirstOrDefault(u => u.UserId == _userId);
+
+                if(user.EmailConfirmed == false)
+                {
+                    Create.IsEnabled = false;
+                    Upload.IsEnabled = false;
+                    txtConfirm.Text = "confirm or edit your email address in profile to get started";
+                    Create.Opacity = 50;
+                    Upload.Opacity = 50;
+                    LetsgoText.Text = "WAIT, ";
+                }
+            }
         }
         private void StartText_MouseDown(object sender, MouseButtonEventArgs e)
         {
@@ -163,14 +179,14 @@ namespace SimpleNoteNG.Windows
             };
         }
 
-        private void LoadProjects()
+        public void LoadProjects()
         {
             try
             {
                 using (var db = new AppDbContext())
                 {
                     _allProjects = db.Projects
-                        .Where(p => p.UserId == _userId)
+                        .Where(p => p.UserId == _userId && !string.IsNullOrEmpty(p.Path)) // Только сохраненные проекты
                         .OrderByDescending(p => p.UpdatedAt)
                         .ToList();
 
@@ -375,23 +391,37 @@ namespace SimpleNoteNG.Windows
                 Filter = "MIDI Files (*.mid)|*.mid",
                 DefaultExt = ".mid"
             };
-
             if (openDialog.ShowDialog() == true)
             {
                 try
                 {
-                    // Проверяем, существует ли файл
+                    // Проверяем файл перед созданием проекта
                     if (!File.Exists(openDialog.FileName))
                     {
                         MessageBox.Show("Selected file does not exist", "Error",
                             MessageBoxButton.OK, MessageBoxImage.Error);
                         return;
                     }
-
+                    // Проверяем, является ли файл валидным MIDI
+                    try
+                    {
+                        var testMidi = new MidiFile(openDialog.FileName);
+                        if (testMidi.Tracks == 0)
+                        {
+                            MessageBox.Show("The selected MIDI file contains no tracks", "Error",
+                                MessageBoxButton.OK, MessageBoxImage.Error);
+                            return;
+                        }
+                    }
+                    catch
+                    {
+                        MessageBox.Show("The selected file is not a valid MIDI file", "Error",
+                            MessageBoxButton.OK, MessageBoxImage.Error);
+                        return;
+                    }
                     using (var db = new AppDbContext())
                     {
                         var projectName = System.IO.Path.GetFileNameWithoutExtension(openDialog.FileName);
-
                         var newProject = new Project
                         {
                             UserId = _userId,
@@ -400,37 +430,17 @@ namespace SimpleNoteNG.Windows
                             CreatedAt = DateTime.Now,
                             UpdatedAt = DateTime.Now
                         };
-
                         db.Projects.Add(newProject);
                         db.SaveChanges();
-
-                        // Создаем Workspace в отдельном блоке try-catch
-                        try
-                        {
-                            var workspace = new Workspace(newProject.ProjectId, _userId);
-                            workspace.LoadProject(newProject.Path);
-                            workspace.Show();
-                            this.Close();
-                        }
-                        catch (Exception ex)
-                        {
-                            // Удаляем проект, если не удалось создать Workspace
-                            db.Projects.Remove(newProject);
-                            db.SaveChanges();
-
-                            MessageBox.Show($"Failed to open project: {ex.Message}", "Error",
-                                MessageBoxButton.OK, MessageBoxImage.Error);
-                        }
+                        var workspace = new Workspace(newProject.ProjectId, _userId);
+                        workspace.LoadProject(newProject.Path); // Загружаем проект сразу после создания
+                        workspace.Show();
+                        this.Close();
                     }
-                }
-                catch (DbUpdateException dbEx)
-                {
-                    MessageBox.Show($"Database error: {dbEx.InnerException?.Message ?? dbEx.Message}", "Error",
-                        MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Unexpected error: {ex.Message}", "Error",
+                    MessageBox.Show($"Error loading project: {ex.Message}", "Error",
                         MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }

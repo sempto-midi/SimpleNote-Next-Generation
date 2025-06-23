@@ -89,31 +89,38 @@
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>
-
-            <!-- Кнопки действий -->
-            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,20">
-                <Button x:Name="DeleteButton"
+            <StackPanel Grid.Row="2" Margin="0,0,0,20" HorizontalAlignment="Center">
+                <Button x:Name="btnConfirm" Content="Confirm Email" Background="#FFCF6E09" Height="25" Click="btnConfirm_Click">
+                    <Button.Resources>
+                        <Style TargetType="{x:Type Border}">
+                            <Setter Property="CornerRadius" Value="3"/>
+                        </Style>
+                    </Button.Resources>
+                </Button>
+                <!-- Кнопки действий -->
+                <StackPanel Orientation="Horizontal">
+                    <Button x:Name="DeleteButton"
                     Background="Transparent" BorderBrush="Transparent"
                     Margin="5" Width="40" Height="40"
                     Click="DeleteButton_Click">
-                    <Image Source="../Images/Delete_Button.png" Width="20"/>
-                </Button>
+                        <Image Source="../Images/Delete_Button.png" Width="20"/>
+                    </Button>
 
-                <Button x:Name="EditSaveButton"
+                    <Button x:Name="EditSaveButton"
                     Cursor="Hand" Style="{DynamicResource CloseMinimizeButtonsHover}"
                     Margin="5" Width="40" Height="40"
                     Click="EditSaveButton_Click">
-                    <Image Source="../Images/Edit_Button.png" Width="30"/>
-                </Button>
+                        <Image Source="../Images/Edit_Button.png" Width="30"/>
+                    </Button>
 
-                <Button x:Name="LogoutButton"
+                    <Button x:Name="LogoutButton"
                     Background="Transparent" BorderBrush="Transparent"
                     Margin="5" Width="40" Height="40"
                     Click="LogoutButton_Click">
-                    <Image Source="../Images/Exit_Button.png" Width="20"/>
-                </Button>
+                        <Image Source="../Images/Exit_Button.png" Width="20"/>
+                    </Button>
+                </StackPanel>
             </StackPanel>
-
             <!-- Кнопка закрытия -->
             <Button Grid.Row="0" 
                 Style="{DynamicResource CloseMinimizeButtonsHover}"

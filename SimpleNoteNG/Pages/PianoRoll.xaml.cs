@@ -12,10 +12,14 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using SimpleNoteNG.Models;
+using SignalGenerator = NAudio.Wave.SampleProviders.SignalGenerator;
+using Rectangle = System.Windows.Shapes.Rectangle;
+using SimpleNoteNG.Windows;
 
 namespace SimpleNoteNG.Pages
 {
-    public partial class PianoRoll : Page
+    public partial class PianoRoll : Page, IDisposable
     {
         private const int KeyHeight = 20;
         private const int OctaveCount = 5;
@@ -37,20 +41,18 @@ namespace SimpleNoteNG.Pages
         private DateTime playbackStartTime;
         private TimeSpan elapsedPlaybackTime;
 
-        // Редактирование нот
         private bool isDragging = false;
         private Point dragStartPoint;
         private List<Rectangle> selectedNotes = new List<Rectangle>();
         private bool isResizing = false;
         private Rectangle noteToResize = null;
         private Point resizeStartPoint;
-        private List<Rectangle> createdRectangles = new List<Rectangle>();
+        public List<Rectangle> createdRectangles = new List<Rectangle>();
         private Dictionary<Rectangle, Point> originalNotePositions = new Dictionary<Rectangle, Point>();
 
         // Музыкальные элементы
-        private List<string> noteNames = new List<string> { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
         private Dictionary<int, Button> keyButtons = new Dictionary<int, Button>();
-        private Dictionary<int, SignalGenerator> activeNotes = new Dictionary<int, SignalGenerator>();
+        private readonly Dictionary<int, SignalGenerator> activeNotes = new Dictionary<int, SignalGenerator>();
         private Dictionary<int, bool> activeNotesState = new Dictionary<int, bool>();
 
         // Аудио компоненты
@@ -59,33 +61,57 @@ namespace SimpleNoteNG.Pages
         private MixingSampleProvider mixer;
         private Dictionary<int, ISampleProvider> noteBuffers = new Dictionary<int, ISampleProvider>();
         private Dictionary<int, SignalGenerator> noteGenerators = new Dictionary<int, SignalGenerator>();
+        private string _currentSampleName = null;
+        private bool disposed = false;
+
+        // Поля для записи
+        private bool _isRecording = false;
+        public bool isRecording { get { return _isRecording; } private set { _isRecording = value; } }
+        private Dictionary<int, List<RecordedNote>> _activeRecordedNotes = new();
+        private List<RecordedNote> _recordedNotes = new();
+        private DateTime _recordingStartTime;
 
         // Внешние зависимости
         private readonly AudioEngine _audioEngine;
         private readonly Metronome _metronome;
+        private int _projectId;
+        private int _userId;
 
         // Событие для обновления времени
         public event Action<string> TimeUpdated;
 
         private string currentScale = "C";
-        private string currentGridDivision = "1/4";
-        private StackPanel toolPanel;
         private bool isDraggingPlayhead = false;
 
-        public PianoRoll(AudioEngine audioEngine, Metronome metronome)
+        private string _pluginName;
+        private bool _isPluginTrack;
+
+        private bool _shouldPlay = true;
+
+        private Dictionary<int, List<Note>> _notesByMidiNote = new();
+
+        private CancellationTokenSource _playbackCts = new CancellationTokenSource();
+        private Task _playbackTask;
+
+        private readonly Dictionary<int, INotePlayer> _activeNotes = new Dictionary<int, INotePlayer>();
+
+        public PianoRoll(AudioEngine audioEngine, Metronome metronome, int projectId, int userId)
         {
             _audioEngine = audioEngine;
             _metronome = metronome;
+            _projectId = projectId;
+            _userId = userId;
 
-            InitializeComponent();
+			InitializeComponent();
             Loaded += PianoRollPage_Loaded;
-            this.PreviewKeyDown += PianoRoll_KeyDown;
 
             InitializePlayback();
             PianoRollCanvas.MouseRightButtonDown += PianoRollCanvas_MouseRightButtonDown;
             PianoRollCanvas.MouseLeftButtonDown += PianoRollCanvas_MouseLeftButtonDown;
             PianoRollCanvas.MouseMove += PianoRollCanvas_MouseMove;
             PianoRollCanvas.MouseLeftButtonUp += PianoRollCanvas_MouseLeftButtonUp;
+
+            MainScrollViewer.PreviewMouseWheel += MainScrollViewer_PreviewMouseWheel;
         }
 
         private void PianoRollPage_Loaded(object sender, RoutedEventArgs e)
@@ -98,7 +124,7 @@ namespace SimpleNoteNG.Pages
             MainScrollViewer.HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
             MainScrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Hidden;
 
-            toolPanel = (StackPanel)this.FindName("ToolPanel");
+            this.Focus();
 
             InitializePianoKeys();
             UpdateGridLines();
@@ -127,46 +153,130 @@ namespace SimpleNoteNG.Pages
         }
         public void InitializeEmptyProject()
         {
-            UpdatePlayheadPosition();
-            UpdateGridLines();
-            DrawTaktNumbers();
+            // Очищаем canvas
             PianoRollCanvas.Children.Clear();
             createdRectangles.Clear();
             selectedNotes.Clear();
             currentPosition = 0;
 
+            // Переинициализируем ключи и разметку
             InitializePianoKeys();
-            UpdateNoteVisibility();
+            UpdateGridLines();
+            DrawTaktNumbers();
+
+            // Добавляем playhead marker обратно, если он был удален
+            if (!PianoRollCanvas.Children.Contains(playheadMarker))
+            {
+                PianoRollCanvas.Children.Add(playheadMarker);
+            }
+
+            UpdatePlayheadPosition();
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposed)
+            {
+                if (disposing)
+                {
+                    // Освободить UI-ресурсы
+                    if (playbackTimer != null)
+                    {
+                        playbackTimer.Stop();
+                        playbackTimer.Tick -= PlaybackTimer_Tick;
+                        playbackTimer = null;
+                    }
+
+                    // Освободить MIDI
+                    if (midiIn != null)
+                    {
+                        midiIn.MessageReceived -= MidiIn_MessageReceived;
+                        midiIn.Stop();
+                        midiIn.Dispose();
+                        midiIn = null;
+                    }
+
+                    // Очистить список активных нот
+                    _activeNotes.Clear();
+                    _recordedNotes.Clear();
+                    _activeRecordedNotes.Clear();
+                    createdRectangles.Clear();
+                    selectedNotes.Clear();
+                    originalNotePositions.Clear();
+                    keyButtons.Clear();
+                    noteGenerators.Clear();
+                    noteBuffers.Clear();
+                    _notesByMidiNote.Clear();
+                    _playbackCts?.Cancel();
+                    _playbackCts?.Dispose();
+                    if (_playbackTask != null && !_playbackTask.IsCompleted)
+                    {
+                        try
+                        {
+                            _playbackTask.Wait();
+                        }
+                        catch { /* Ignore exceptions on task cancellation */ }
+                    }
+                }
+
+                disposed = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        ~PianoRoll()
+        {
+            Dispose(false);
         }
 
         public void LoadMidiFile(string filePath)
         {
-            if (string.IsNullOrEmpty(filePath))
-            {
-                InitializeEmptyProject();
-                return;
-            }
-
-            if (!File.Exists(filePath))
-            {
-                MessageBox.Show("MIDI file not found", "Error",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-                InitializeEmptyProject();
-                return;
-            }
-
             try
             {
+                if (string.IsNullOrEmpty(filePath))
+                {
+                    InitializeEmptyProject();
+                    return;
+                }
+                if (!File.Exists(filePath))
+                {
+                    MessageBox.Show("MIDI file not found", "Error",
+                                  MessageBoxButton.OK, MessageBoxImage.Error);
+                    InitializeEmptyProject();
+                    return;
+                }
+
                 ImportFromMidi(filePath);
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error loading MIDI: {ex.Message}", "Error",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                              MessageBoxButton.OK, MessageBoxImage.Error);
                 InitializeEmptyProject();
             }
         }
+        private void AddRectangleToCanvas(Rectangle rect, double left, double top)
+        {
+            if (rect == null)
+            {
+                throw new ArgumentNullException(nameof(rect), "Cannot add a null rectangle to the canvas.");
+            }
 
+            if (left < 0 || top < 0)
+            {
+                throw new ArgumentException("Left and Top values must be non-negative.", nameof(left));
+            }
+
+            Canvas.SetLeft(rect, left);
+            Canvas.SetTop(rect, top);
+            PianoRollCanvas.Children.Add(rect);
+            createdRectangles.Add(rect);
+        }
         private void UpdateNoteVisibility()
         {
             foreach (var keyButton in keyButtons.Values)
@@ -212,61 +322,62 @@ namespace SimpleNoteNG.Pages
                 SelectAllNotes();
                 e.Handled = true;
             }
-        }
-
-        private void DeleteSelectedNotes()
-        {
-            foreach (var note in selectedNotes.ToList())
+            else if(e.Key == Key.S && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
             {
-                PianoRollCanvas.Children.Remove(note);
-                createdRectangles.Remove(note);
-            }
-            selectedNotes.Clear();
-        }
-
-        private void SelectAllNotes()
-        {
-            ClearSelection();
-            foreach (var note in createdRectangles)
-            {
-                selectedNotes.Add(note);
-                note.Fill = new SolidColorBrush(Color.FromArgb(128, 207, 110, 0));
+                ShowSaveFormatDialog();
+                e.Handled = true;
             }
         }
 
-        private void ClearSelection()
+        #region Record Methods
+        public void StartRecording()
         {
-            foreach (var note in selectedNotes)
-            {
-                note.Fill = new SolidColorBrush(Color.FromArgb(128, 0, 255, 0));
-            }
-            selectedNotes.Clear();
+            _isRecording = true;
+            _recordedNotes.Clear();
+            _activeRecordedNotes.Clear();
+            _recordingStartTime = DateTime.Now;
+            _metronome.Start();
         }
 
-        private void ToggleNoteSelection(Rectangle note)
+        public void StopRecording()
         {
-            if (selectedNotes.Contains(note))
+            _isRecording = false;
+            _metronome.Stop();
+
+            foreach (var note in _activeRecordedNotes.Values.SelectMany(n => n))
             {
-                selectedNotes.Remove(note);
-                note.Fill = new SolidColorBrush(Color.FromArgb(128, 0, 255, 0));
-            }
-            else
-            {
-                selectedNotes.Add(note);
-                note.Fill = new SolidColorBrush(Color.FromArgb(128, 207, 110, 0));
+                _recordedNotes.Add(note);
             }
 
-            // Обновляем текст при выделении
-            var parent = VisualTreeHelper.GetParent(note) as Grid;
-            if (parent != null && parent.Children.Count > 1)
+            DrawRecordedNotes();
+        }
+
+        private void DrawRecordedNotes()
+        {
+            foreach (var note in _recordedNotes)
             {
-                var textBlock = parent.Children[1] as TextBlock;
-                if (textBlock != null)
+                int keyIndex = note.MidiNote - LowestNote;
+                if (keyIndex < 0 || keyIndex >= TotalKeys) continue;
+
+                double top = (TotalKeys - 1 - keyIndex) * KeyHeight;
+                double startPos = note.StartTime * pixelsPerSecond;
+                double duration = (note.EndTime - note.StartTime) * pixelsPerSecond;
+
+                var rect = new Rectangle
                 {
-                    textBlock.Foreground = selectedNotes.Contains(note) ? Brushes.Black : Brushes.White;
-                }
+                    Stroke = Brushes.Blue,
+                    Fill = new SolidColorBrush(Color.FromArgb(128, 0, 255, 0)),
+                    StrokeThickness = 1,
+                    Width = Math.Max(5, duration),
+                    Height = KeyHeight
+                };
+
+                Canvas.SetLeft(rect, startPos);
+                Canvas.SetTop(rect, top);
+                AddRectangleToCanvas(rect, startPos, top);
             }
         }
+        #endregion
 
         #region ScrollViewer Handlers
         private void TaktNumbersScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
@@ -289,11 +400,23 @@ namespace SimpleNoteNG.Pages
             // Синхронизация вертикального скролла с основным ScrollViewer
             MainScrollViewer.ScrollToVerticalOffset(e.VerticalOffset);
         }
+
+        private void MainScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (Keyboard.Modifiers == ModifierKeys.Shift)
+            {
+                double offset = MainScrollViewer.HorizontalOffset - (e.Delta / 3);
+                MainScrollViewer.ScrollToHorizontalOffset(offset);
+                TaktNumbersScrollViewer.ScrollToHorizontalOffset(offset);
+                e.Handled = true;
+            }
+        }
         #endregion
 
         #region Note Editing
         private void PianoRollCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            this.Focus();
             var position = e.GetPosition(PianoRollCanvas);
 
             // Проверяем попадание на область изменения размера
@@ -359,6 +482,24 @@ namespace SimpleNoteNG.Pages
 
             e.Handled = true;
         }
+        private void PianoRollCanvas_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            this.Focus();
+            ClearSelection();
+            var position = e.GetPosition(PianoRollCanvas);
+            var rectToRemove = createdRectangles.FirstOrDefault(rect =>
+            {
+                Rect bounds = new Rect(Canvas.GetLeft(rect), Canvas.GetTop(rect), rect.Width, rect.Height);
+                return bounds.Contains(position);
+            });
+
+            if (rectToRemove != null)
+            {
+                PianoRollCanvas.Children.Remove(rectToRemove);
+                createdRectangles.Remove(rectToRemove);
+                selectedNotes.Remove(rectToRemove);
+            }
+        }
 
         private void PianoRollCanvas_MouseMove(object sender, MouseEventArgs e)
         {
@@ -367,14 +508,8 @@ namespace SimpleNoteNG.Pages
             if (isResizing && noteToResize != null)
             {
                 double newWidth = Math.Max(20, noteToResize.Width + (position.X - resizeStartPoint.X));
-                int division = currentGridDivision switch
-                {
-                    "1" => 1,
-                    "1/2" => 2,
-                    "1/4" => 4,
-                    _ => 4
-                };
-                double gridSize = 100.0 / division;
+                
+                double gridSize = 100.0 / 4;
                 double snappedWidth = Math.Round(newWidth / gridSize) * gridSize;
                 noteToResize.Width = snappedWidth;
                 resizeStartPoint = position;
@@ -392,15 +527,7 @@ namespace SimpleNoteNG.Pages
                     double newLeft = originalLeft + deltaX;
                     double newTop = originalTop + deltaY;
 
-                    // Привязка к сетке
-                    int division = currentGridDivision switch
-                    {
-                        "1" => 1,
-                        "1/2" => 2,
-                        "1/4" => 4,
-                        _ => 4
-                    };
-                    double gridSize = 100.0 / division;
+                    double gridSize = 100.0 / 4;
                     newLeft = Math.Round(newLeft / gridSize) * gridSize;
                     newTop = Math.Round(newTop / KeyHeight) * KeyHeight;
 
@@ -413,7 +540,6 @@ namespace SimpleNoteNG.Pages
                 }
             }
         }
-
         private void PianoRollCanvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
             isDragging = false;
@@ -421,22 +547,10 @@ namespace SimpleNoteNG.Pages
             noteToResize = null;
             Mouse.Capture(null);
         }
-
         private void CreateNewNoteAtPosition(Point position)
         {
-            int division = currentGridDivision switch
-            {
-                "1" => 1,
-                "1/2" => 2,
-                "1/4" => 4,
-                _ => 4
-            };
-            double gridSize = 100.0 / division;
+            double gridSize = 100.0 / 4;
             int keyIndex = (int)(position.Y / KeyHeight);
-
-            // Рассчитываем MIDI номер ноты
-            int midiNote = LowestNote + (TotalKeys - 1 - keyIndex); // Добавлено
-
             double snappedX = Math.Floor(position.X / gridSize) * gridSize;
             int taktIndex = (int)(snappedX / 100);
             double noteX = taktIndex * 100 + (snappedX % 100);
@@ -450,35 +564,60 @@ namespace SimpleNoteNG.Pages
                 var newRectangle = new Rectangle
                 {
                     Stroke = Brushes.Green,
-                    Fill = new SolidColorBrush(Color.FromArgb(128, 0, 255, 0)),
+                    Fill = new SolidColorBrush(Color.FromArgb(128, 207, 110, 0)),
                     StrokeThickness = 1,
                     Width = gridSize,
-                    Height = KeyHeight,
-                    Tag = midiNote // Теперь переменная определена
+                    Height = KeyHeight
                 };
 
-                // Создаем TextBlock для отображения названия ноты
-                var noteLabel = new TextBlock
-                {
-                    Text = GetNoteName(midiNote),
-                    Foreground = Brushes.White,
-                    FontSize = 10,
-                    Margin = new Thickness(2),
-                    VerticalAlignment = VerticalAlignment.Top,
-                    HorizontalAlignment = HorizontalAlignment.Left
-                };
-
-                // Создаем контейнер Grid для объединения прямоугольника и текста
-                var noteContainer = new Grid();
-                noteContainer.Children.Add(newRectangle);
-                noteContainer.Children.Add(noteLabel);
-
-                // Устанавливаем позицию
-                Canvas.SetLeft(noteContainer, noteX);
-                Canvas.SetTop(noteContainer, keyIndex * KeyHeight);
-
-                PianoRollCanvas.Children.Add(noteContainer);
+                Canvas.SetLeft(newRectangle, noteX);
+                Canvas.SetTop(newRectangle, keyIndex * KeyHeight);
+                PianoRollCanvas.Children.Add(newRectangle);
                 createdRectangles.Add(newRectangle);
+                selectedNotes.Clear();
+                selectedNotes.Add(newRectangle);
+            }
+        }
+        private void DeleteSelectedNotes()
+        {
+            foreach (var note in selectedNotes.ToList())
+            {
+                PianoRollCanvas.Children.Remove(note);
+                createdRectangles.Remove(note);
+            }
+            selectedNotes.Clear();
+        }
+
+        private void SelectAllNotes()
+        {
+            ClearSelection();
+            foreach (var note in createdRectangles)
+            {
+                selectedNotes.Add(note);
+                note.Fill = new SolidColorBrush(Color.FromArgb(128, 207, 110, 0));
+            }
+        }
+
+        private void ClearSelection()
+        {
+            foreach (var note in selectedNotes)
+            {
+                note.Fill = new SolidColorBrush(Color.FromArgb(128, 0, 255, 0));
+            }
+            selectedNotes.Clear();
+        }
+
+        private void ToggleNoteSelection(Rectangle note)
+        {
+            if (selectedNotes.Contains(note))
+            {
+                selectedNotes.Remove(note);
+                note.Fill = new SolidColorBrush(Color.FromArgb(128, 0, 255, 0)); // стандартный цвет
+            }
+            else
+            {
+                selectedNotes.Add(note);
+                note.Fill = new SolidColorBrush(Color.FromArgb(128, 207, 110, 0)); // выделенный цвет
             }
         }
         private string GetNoteName(int midiNote)
@@ -486,23 +625,6 @@ namespace SimpleNoteNG.Pages
             string[] noteNames = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
             int octave = (midiNote / 12) - 1;
             return noteNames[midiNote % 12] + octave;
-        }
-
-        private void PianoRollCanvas_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            var position = e.GetPosition(PianoRollCanvas);
-            var rectToRemove = createdRectangles.FirstOrDefault(rect =>
-            {
-                Rect bounds = new Rect(Canvas.GetLeft(rect), Canvas.GetTop(rect), rect.Width, rect.Height);
-                return bounds.Contains(position);
-            });
-
-            if (rectToRemove != null)
-            {
-                PianoRollCanvas.Children.Remove(rectToRemove);
-                createdRectangles.Remove(rectToRemove);
-                selectedNotes.Remove(rectToRemove);
-            }
         }
         #endregion
 
@@ -521,6 +643,9 @@ namespace SimpleNoteNG.Pages
 
         public void StartPlayback()
         {
+            if (_isRecording)
+                StartRecording();
+
             if (!isPlaying)
             {
                 playbackStartTime = DateTime.Now - elapsedPlaybackTime;
@@ -528,15 +653,27 @@ namespace SimpleNoteNG.Pages
                 {
                     InitializePlayback();
                 }
-
                 if (_metronome?.IsEnabled == true)
                 {
                     _metronome.Start();
                 }
-
                 isPlaying = true;
                 playheadMarker.Visibility = Visibility.Visible;
                 playbackTimer.Start();
+            }
+        }
+        private void UpdatePlaybackPosition()
+        {
+            elapsedPlaybackTime = DateTime.Now - playbackStartTime;
+            currentPosition = elapsedPlaybackTime.TotalSeconds * pixelsPerSecond;
+
+            UpdateActiveNotes();
+            UpdatePlayheadPosition();
+            TimeUpdated?.Invoke($"{elapsedPlaybackTime:mm\\:ss\\.fff}");
+
+            if (currentPosition >= PianoRollCanvas.ActualWidth)
+            {
+                StopPlayback();
             }
         }
 
@@ -546,7 +683,6 @@ namespace SimpleNoteNG.Pages
             {
                 isPlaying = false;
                 playbackTimer.Stop();
-                playheadMarker.Visibility = Visibility.Visible;
                 elapsedPlaybackTime = DateTime.Now - playbackStartTime;
                 StopAllNotes();
                 _metronome?.Pause();
@@ -555,7 +691,6 @@ namespace SimpleNoteNG.Pages
 
         public void StopPlayback()
         {
-            _metronome?.Stop();
             isPlaying = false;
             playbackTimer.Stop();
             currentPosition = 0;
@@ -568,10 +703,11 @@ namespace SimpleNoteNG.Pages
 
         private void StopAllNotes()
         {
-            foreach (var note in activeNotes.Keys.ToList())
+            foreach (var note in _activeNotes.Keys.ToList())
             {
                 StopNote(note);
             }
+            _activeNotes.Clear();
         }
         #endregion
 
@@ -613,32 +749,34 @@ namespace SimpleNoteNG.Pages
                 };
             }
         }
-
+        public void SetCurrentSample(string sampleName)
+        {
+            _currentSampleName = sampleName;
+        }
         private void PlayNote(int midiNote)
         {
-            if (!activeNotes.ContainsKey(midiNote))
-            {
-                var signalGenerator = new SignalGenerator
-                {
-                    Type = SignalGeneratorType.Sin,
-                    Gain = 0.2,
-                    Frequency = MidiNoteToFrequency(midiNote)
-                };
+            _audioEngine.PlayNote(midiNote);
+            HighlightKey(midiNote, true);
 
-                activeNotes[midiNote] = signalGenerator;
-                UpdateAudioOutput();
-                HighlightKey(midiNote, true);
-            }
         }
 
         private void StopNote(int midiNote)
         {
-            if (activeNotes.ContainsKey(midiNote))
+            _audioEngine.StopNote(midiNote);
+            HighlightKey(midiNote, false);
+        }
+
+        public void SetPlaybackEnabled(bool enabled)
+        {
+            if (enabled && !isPlaying && _shouldPlay)
             {
-                activeNotes.Remove(midiNote);
-                UpdateAudioOutput();
-                HighlightKey(midiNote, false);
+                StartPlayback();
             }
+            else if (!enabled && isPlaying)
+            {
+                PausePlayback();
+            }
+            _shouldPlay = enabled;
         }
 
         private void UpdateAudioOutput()
@@ -646,7 +784,7 @@ namespace SimpleNoteNG.Pages
             waveOut?.Stop();
             var mixedSignal = MixMultipleSignals();
             if (mixedSignal != null)
-            {
+            {   
                 waveOut?.Init(mixedSignal);
                 waveOut?.Play();
             }
@@ -665,6 +803,10 @@ namespace SimpleNoteNG.Pages
             }
 
             return mixingProvider;
+        }
+
+        public void SetVolume(double volume)
+        {
         }
         #endregion
 
@@ -689,7 +831,8 @@ namespace SimpleNoteNG.Pages
                     BorderThickness = new Thickness(0.5),
                     Margin = new Thickness(0),
                     Padding = new Thickness(0),
-                    Style = (Style)FindResource("PianoKeyStyle")
+                    Style = (Style)FindResource("PianoKeyStyle"),
+                    Template = (ControlTemplate)FindResource("PianoKeyControlTemplate")
                 };
 
                 // Обработчики событий для предпрослушивания нот
@@ -725,35 +868,6 @@ namespace SimpleNoteNG.Pages
             return noteIndex == 1 || noteIndex == 3 || noteIndex == 6 || noteIndex == 8 || noteIndex == 10;
         }
 
-        private void DrawGridLines()
-        {
-            for (int i = 0; i < TotalKeys; i++)
-            {
-                PianoRollCanvas.Children.Add(new Line
-                {
-                    X1 = 0,
-                    X2 = TotalTakts * 100,
-                    Y1 = i * KeyHeight,
-                    Y2 = i * KeyHeight,
-                    Stroke = Brushes.Gray,
-                    StrokeThickness = 0.5
-                });
-            }
-
-            for (int i = 0; i < TotalTakts * 400; i += 100)
-            {
-                PianoRollCanvas.Children.Add(new Line
-                {
-                    X1 = i,
-                    X2 = i,
-                    Y1 = 0,
-                    Y2 = TotalKeys * KeyHeight,
-                    Stroke = Brushes.Gray,
-                    StrokeThickness = 0.5
-                });
-            }
-        }
-
         private void DrawTaktNumbers()
         {
             for (int i = 1; i <= TotalTakts; i++)
@@ -771,6 +885,7 @@ namespace SimpleNoteNG.Pages
 
         private void UpdateGridLines()
         {
+            // Удаляем старые линии
             var linesToRemove = PianoRollCanvas.Children.OfType<Line>()
                 .Where(l => l.Tag?.ToString() == "grid")
                 .ToList();
@@ -780,40 +895,32 @@ namespace SimpleNoteNG.Pages
                 PianoRollCanvas.Children.Remove(line);
             }
 
-            int division = currentGridDivision switch
+            // Горизонтальные линии (клавиши)
+            for (int y = 0; y <= TotalKeys * KeyHeight; y += KeyHeight)
             {
-                "1" => 1,
-                "1/2" => 2,
-                "1/4" => 4,
-                _ => 4
-            };
+                PianoRollCanvas.Children.Add(new Line
+                {
+                    X1 = 0,
+                    X2 = PianoRollCanvas.Width,
+                    Y1 = y,
+                    Y2 = y,
+                    Stroke = Brushes.Gray,
+                    StrokeThickness = 0.5,
+                    Tag = "grid"
+                });
+            }
 
-            double step = 100.0 / division;
-
-            for (double x = 0; x <= TotalTakts * 100; x += step)
+            // Вертикальные линии (фиксированный шаг 25px)
+            for (double x = 0; x <= PianoRollCanvas.Width; x += 25)
             {
                 PianoRollCanvas.Children.Add(new Line
                 {
                     X1 = x,
                     X2 = x,
                     Y1 = 0,
-                    Y2 = TotalKeys * KeyHeight,
+                    Y2 = PianoRollCanvas.Height,
                     Stroke = Brushes.Gray,
-                    StrokeThickness = (x % 100 == 0) ? 0.5 : 0.25,
-                    Tag = "grid"
-                });
-            }
-
-            for (int y = 0; y <= TotalKeys * KeyHeight; y += KeyHeight)
-            {
-                PianoRollCanvas.Children.Add(new Line
-                {
-                    X1 = 0,
-                    X2 = TotalTakts * 100,
-                    Y1 = y,
-                    Y2 = y,
-                    Stroke = Brushes.Gray,
-                    StrokeThickness = 0.5,
+                    StrokeThickness = (x % 100 == 0) ? 0.5 : 0.25, // Жирнее каждые 4 линии
                     Tag = "grid"
                 });
             }
@@ -830,8 +937,7 @@ namespace SimpleNoteNG.Pages
             {
                 if (keyButtons.TryGetValue(midiNote, out var keyButton))
                 {
-                    keyButton.Background = highlight ? Brushes.Yellow :
-                        (keyButton.Content.ToString().Contains("#") ? Brushes.Black : Brushes.White);
+                    keyButton.Tag = highlight ? "Active" : null;
                 }
             }));
         }
@@ -840,84 +946,66 @@ namespace SimpleNoteNG.Pages
         #region Event Handlers
         private void PlaybackTimer_Tick(object sender, EventArgs e)
         {
-            try
+            if (!isPlaying) return;
+
+            elapsedPlaybackTime = DateTime.Now - playbackStartTime;
+            currentPosition = elapsedPlaybackTime.TotalSeconds * pixelsPerSecond;
+
+            UpdateActiveNotes(); // Воспроизводит ноты под маркером
+            UpdatePlayheadPosition();
+
+            if (currentPosition >= PianoRollCanvas.ActualWidth)
             {
-                if (!isPlaying || playbackStartTime == DateTime.MinValue) return;
-
-                elapsedPlaybackTime = DateTime.Now - playbackStartTime;
-                currentPosition = elapsedPlaybackTime.TotalSeconds * pixelsPerSecond;
-
-                if (TimeUpdated != null && playheadMarker != null && PianoRollCanvas != null)
-                {
-                    TimeUpdated.Invoke($"{elapsedPlaybackTime:mm\\:ss\\.fff}");
-                    UpdatePlayheadPosition();
-                    UpdateActiveNotes();
-
-                    if (currentPosition >= PianoRollCanvas.ActualWidth)
-                    {
-                        StopPlayback();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Playback error: {ex.Message}");
                 StopPlayback();
             }
-        }
-        private void Rectangle_MouseMove(object sender, MouseEventArgs e)
-        {
-            var rect = sender as Rectangle;
-            var position = e.GetPosition(rect);
 
-            if (position.X > rect.ActualWidth - 5)
-            {
-                rect.Cursor = Cursors.SizeWE;
-            }
-            else
-            {
-                rect.Cursor = Cursors.Arrow;
-            }
+            TimeUpdated?.Invoke($"{elapsedPlaybackTime:mm\\:ss\\.fff}");
         }
         private void UpdateActiveNotes()
         {
-            var notesToPlay = createdRectangles
-                .Where(rect => currentPosition >= Canvas.GetLeft(rect) &&
-                               currentPosition < Canvas.GetLeft(rect) + rect.Width)
-                .Select(rect => 60 + TotalKeys - 1 - (int)(Canvas.GetTop(rect) / KeyHeight))
-                .Distinct()
-                .ToList();
-
-            foreach (var note in notesToPlay.Where(n => !activeNotesState.ContainsKey(n) || !activeNotesState[n]))
+            var notesToPlay = new HashSet<int>();
+            foreach (var rect in createdRectangles)
             {
-                PlayNote(note);
-                activeNotesState[note] = true;
+                double start = Canvas.GetLeft(rect);
+                double end = start + rect.Width;
+                if (currentPosition >= start && currentPosition < end)
+                {
+                    int midiNote = LowestNote + TotalKeys - 1 - (int)(Canvas.GetTop(rect) / KeyHeight);
+                    notesToPlay.Add(midiNote);
+                }
             }
 
-            foreach (var note in activeNotesState.Keys.Except(notesToPlay).ToList())
+            // Стоп ноты вне диапазона
+            foreach (var note in _activeNotes.Keys.Except(notesToPlay).ToList())
             {
                 StopNote(note);
-                activeNotesState[note] = false;
+                _activeNotes.Remove(note);
+            }
+
+            // Начать новые ноты
+            foreach (var note in notesToPlay.Where(n => !_activeNotes.ContainsKey(n)))
+            {
+                PlayNote(note);
+                _activeNotes[note] = null;
             }
         }
-
         private void Button_MouseDown(object sender, MouseButtonEventArgs e)
-        {
+		{
             if (sender is Button button && button.Tag is int midiNote)
             {
                 PlayNote(midiNote);
             }
         }
 
-        private void Button_MouseUp(object sender, MouseButtonEventArgs e)
-        {
-            if (sender is Button button && button.Tag is int midiNote)
-            {
-                StopNote(midiNote);
-            }
-        }
+		private void Button_MouseUp(object sender, MouseButtonEventArgs e)
+		{
+			if (sender is Button button && button.Tag is int midiNote)
+			{
+				StopNote(midiNote);
+			}
+		}
 
-        private void PlayheadMarker_MouseDown(object sender, MouseButtonEventArgs e)
+		private void PlayheadMarker_MouseDown(object sender, MouseButtonEventArgs e)
         {
             if (e.ChangedButton == MouseButton.Left)
             {
@@ -974,10 +1062,35 @@ namespace SimpleNoteNG.Pages
             {
                 Dispatcher.Invoke(() =>
                 {
+                    var now = (DateTime.Now - _recordingStartTime).TotalSeconds;
+
                     if (noteEvent.CommandCode == MidiCommandCode.NoteOn)
+                    {
                         PlayNote(noteEvent.NoteNumber);
-                    else if (noteEvent.CommandCode == MidiCommandCode.NoteOff)
+
+                        if (_isRecording)
+                        {
+                            _activeRecordedNotes[noteEvent.NoteNumber] = new List<RecordedNote>
+                            {
+                                new RecordedNote { MidiNote = noteEvent.NoteNumber, StartTime = now }
+                            };
+                        }
+                    }
+                    else if (noteEvent.CommandCode == MidiCommandCode.NoteOff ||
+                             (noteEvent is NoteOnEvent zeroVel && zeroVel.Velocity == 0))
+                    {
                         StopNote(noteEvent.NoteNumber);
+
+                        if (_isRecording && _activeRecordedNotes.TryGetValue(noteEvent.NoteNumber, out var notes))
+                        {
+                            foreach (var note in notes)
+                            {
+                                note.EndTime = now;
+                                _recordedNotes.Add(note);
+                            }
+                            _activeRecordedNotes.Remove(noteEvent.NoteNumber);
+                        }
+                    }
                 });
             }
         }
@@ -1033,7 +1146,33 @@ namespace SimpleNoteNG.Pages
                                MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+        private void ShowSaveFormatDialog()
+        {
+            var parent = new Workspace(_projectId, _userId);
 
+            var result = MessageBox.Show(
+                "Выберите формат для сохранения:\n\n" +
+                "- Нажмите 'Yes' чтобы сохранить как MIDI\n" +
+                "- Нажмите 'No' чтобы сохранить как MP3",
+                "Сохранить проект",
+                MessageBoxButton.YesNoCancel,
+                MessageBoxImage.Question);
+
+            switch (result)
+            {
+                case MessageBoxResult.Yes:
+                    parent.ExportToMIDI_Click(null, null);
+                    break;
+
+                case MessageBoxResult.No:
+                    parent.ExportToMP3_Click(null, null);
+                    break;
+
+                case MessageBoxResult.Cancel:
+                    // Отмена — ничего не делаем
+                    break;
+            }
+        }
         private void UpdateProjectInDatabase(string filePath, int projectId, int userId)
         {
             try
@@ -1158,35 +1297,69 @@ namespace SimpleNoteNG.Pages
         {
             try
             {
-                PianoRollCanvas.Children.Clear();
-                createdRectangles.Clear();
-                selectedNotes.Clear();
+                if (string.IsNullOrEmpty(filePath))
+                {
+                    InitializeEmptyProject();
+                    return;
+                }
+                if (!File.Exists(filePath))
+                {
+                    MessageBox.Show("MIDI file not found", "Error",
+                                  MessageBoxButton.OK, MessageBoxImage.Error);
+                    InitializeEmptyProject();
+                    return;
+                }
+
+                // Очищаем canvas безопасным способом
+                Dispatcher.Invoke(() =>
+                {
+                    PianoRollCanvas.Children.Clear();
+                    createdRectangles.Clear();
+                    selectedNotes.Clear();
+                });
 
                 var midiFile = new MidiFile(filePath);
                 int ticksPerQuarterNote = midiFile.DeltaTicksPerQuarterNote;
 
-                var noteEvents = new List<(int Note, long Start, long End)>();
+                // Проверяем, что ticksPerQuarterNote не равен 0
+                if (ticksPerQuarterNote == 0)
+                {
+                    MessageBox.Show("Invalid MIDI file: DeltaTicksPerQuarterNote is zero", "Error",
+                                  MessageBoxButton.OK, MessageBoxImage.Error);
+                    InitializeEmptyProject();
+                    return;
+                }
+
+                var noteEvents = new List<MidiNoteEvent>();
 
                 // Собираем все ноты из всех треков
                 for (int track = 0; track < midiFile.Tracks; track++)
                 {
                     var events = midiFile.Events[track];
-                    var activeNotes = new Dictionary<int, NoteOnEvent>();
+                    if (events == null) continue;
 
+                    var activeNotes = new Dictionary<int, NoteOnEvent>();
                     foreach (var midiEvent in events)
                     {
-                        if (midiEvent is NoteOnEvent noteOnEvent && noteOnEvent.Velocity > 0)
+                        if (midiEvent == null) continue;
+
+                        if (midiEvent is NoteOnEvent noteOn && noteOn.Velocity > 0)
                         {
-                            activeNotes[noteOnEvent.NoteNumber] = noteOnEvent;
+                            activeNotes[noteOn.NoteNumber] = noteOn;
                         }
-                        else if (midiEvent is NoteEvent noteOffEvent &&
-                                (noteOffEvent.CommandCode == MidiCommandCode.NoteOff ||
-                                 (noteOffEvent is NoteOnEvent zeroVelNoteOn && zeroVelNoteOn.Velocity == 0)))
+                        else if (midiEvent is NoteEvent noteOff &&
+                                 (noteOff.CommandCode == MidiCommandCode.NoteOff ||
+                                  (noteOff is NoteOnEvent zeroVelNoteOn && zeroVelNoteOn.Velocity == 0)))
                         {
-                            if (activeNotes.TryGetValue(noteOffEvent.NoteNumber, out var startedNote))
+                            if (activeNotes.TryGetValue(noteOff.NoteNumber, out var startedNote))
                             {
-                                noteEvents.Add((noteOffEvent.NoteNumber, startedNote.AbsoluteTime, noteOffEvent.AbsoluteTime));
-                                activeNotes.Remove(noteOffEvent.NoteNumber);
+                                noteEvents.Add(new MidiNoteEvent
+                                {
+                                    Note = noteOff.NoteNumber,
+                                    Start = startedNote.AbsoluteTime,
+                                    End = noteOff.AbsoluteTime
+                                });
+                                activeNotes.Remove(noteOff.NoteNumber);
                             }
                         }
                     }
@@ -1194,57 +1367,98 @@ namespace SimpleNoteNG.Pages
 
                 if (!noteEvents.Any())
                 {
-                    MessageBox.Show("В MIDI файле не найдено нот", "Информация",
+                    MessageBox.Show("No notes found in MIDI file", "Information",
                                   MessageBoxButton.OK, MessageBoxImage.Information);
+                    InitializeEmptyProject();
                     return;
                 }
 
                 // Находим минимальное время для нормализации
                 long minTime = noteEvents.Min(n => n.Start);
 
-                // Импортируем ноты
-                foreach (var (note, start, end) in noteEvents)
+                // Создаем все ноты в UI потоке
+                Dispatcher.Invoke(() =>
                 {
-                    // Конвертируем из тиков в позиции piano roll (1 такт = 4 четверти = 100px)
-                    double startPos = (start - minTime) / (double)(ticksPerQuarterNote * 4) * 100;
-                    double duration = (end - start) / (double)(ticksPerQuarterNote * 4) * 100;
-
-                    // Проверяем диапазон нот
-                    int keyIndex = note - LowestNote;
-                    if (keyIndex < 0 || keyIndex >= TotalKeys) continue;
-
-                    double top = (TotalKeys - 1 - keyIndex) * KeyHeight;
-
-                    var rect = new Rectangle
+                    foreach (var noteEvent in noteEvents)
                     {
-                        Stroke = Brushes.Green,
-                        Fill = new SolidColorBrush(Color.FromArgb(128, 0, 255, 0)),
-                        StrokeThickness = 1,
-                        Width = duration,
-                        Height = KeyHeight
-                    };
+                        double measureStart = (noteEvent.Start - minTime) / (double)(ticksPerQuarterNote * 4);
+                        double durationInMeasures = (noteEvent.End - noteEvent.Start) / (double)(ticksPerQuarterNote * 4);
 
-                    Canvas.SetLeft(rect, startPos);
-                    Canvas.SetTop(rect, top);
-                    PianoRollCanvas.Children.Add(rect);
-                    createdRectangles.Add(rect);
-                }
+                        // Конвертируем в пиксели: 1 такт = 100px
+                        double startPos = measureStart * 100;
+                        double rectWidth = durationInMeasures * 100;
 
-                if (resetPosition)
-                {
-                    currentPosition = 0;
-                    UpdatePlayheadPosition();
-                }
+                        // Вычисляем высоту на основе MIDI-номера
+                        int keyIndex = noteEvent.Note - LowestNote;
+                        if (keyIndex < 0 || keyIndex >= TotalKeys) continue;
 
-                UpdateGridLines();
-                DrawTaktNumbers();
+                        double top = (TotalKeys - 1 - keyIndex) * KeyHeight;
+
+                        // Создаем прямоугольник — ноту
+                        var rect = new Rectangle
+                        {
+                            Stroke = Brushes.Green,
+                            Fill = new SolidColorBrush(Color.FromArgb(128, 0, 255, 0)),
+                            StrokeThickness = 1,
+                            Width = Math.Max(5, rectWidth), // Минимальная ширина 5px
+                            Height = KeyHeight
+                        };
+
+                        Canvas.SetLeft(rect, Math.Max(0, startPos));
+                        Canvas.SetTop(rect, Math.Max(0, top));
+
+                        // Проверяем, что rect не null перед добавлением
+                        if (rect != null)
+                        {
+                            PianoRollCanvas.Children.Add(rect);
+                            createdRectangles.Add(rect);
+                        }
+                    }
+
+                    if (resetPosition)
+                    {
+                        currentPosition = 0;
+                        UpdatePlayheadPosition();
+                    }
+
+                    UpdateGridLines();
+                    DrawTaktNumbers();
+                });
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка импорта MIDI: {ex.Message}", "Ошибка",
-                              MessageBoxButton.OK, MessageBoxImage.Error);
+                Dispatcher.Invoke(() =>
+                {
+                    MessageBox.Show($"Error importing MIDI: {ex.Message}", "Error",
+                                  MessageBoxButton.OK, MessageBoxImage.Error);
+                    InitializeEmptyProject();
+                });
             }
         }
+
         #endregion
+        public List<Rectangle> GetNotes()
+        {
+            return createdRectangles;
+        }
     }
+}
+public class PlaybackContext
+{
+    public SignalGenerator Generator { get; set; }
+    public bool IsPluginNote { get; set; }
+}
+
+public class MidiNoteEvent
+{
+    public int Note { get; set; }
+    public long Start { get; set; }
+    public long End { get; set; }
+}
+
+public class RecordedNote
+{
+    public int MidiNote { get; set; }
+    public double StartTime { get; set; } // в секундах
+    public double EndTime { get; set; }   // в секундах
 }

@@ -16,7 +16,16 @@
         <WindowChrome GlassFrameThickness="0" CornerRadius="10" CaptionHeight="0"
           UseAeroCaptionButtons="False" ResizeBorderThickness="7"/>
     </WindowChrome.WindowChrome>
-
+    <Window.Resources>
+        <Style x:Key="ErrorTextBlockStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="Red"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="20,0,20,0"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Bottom"/>
+            <Setter Property="Visibility" Value="Collapsed"/>
+        </Style>
+    </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -70,11 +79,11 @@
                 <Grid Margin="0,10,0,-5">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="130"/>
-                        <RowDefinition/>
-                        <RowDefinition/>
-                        <RowDefinition/>
-                        <RowDefinition/>
-                        <RowDefinition/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <StackPanel Orientation="Horizontal" Grid.Row="0" HorizontalAlignment="Center" Margin="0,83,0,0">
@@ -82,56 +91,65 @@
                         <TextBlock Text=" Up" Foreground="#FFCF6E00" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="36"/>
                     </StackPanel>
 
-                    <TextBox x:Name="txtUsername" Grid.Row="1" Margin="20,20,20,10" Height="60" Width="400"
-                        Background="#FFD4D4D4" SelectionBrush="#FFCF6E00" SelectionTextBrush="#FF464646" FontSize="30"
-                        HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-                        Style="{DynamicResource PlaceholderTextBoxStyle}"
-                        Tag="username"
-                        MaxLength="20">
-                        <TextBox.Resources>
-                            <Style TargetType="{x:Type Border}">
-                                <Setter Property="CornerRadius" Value="10,10,0,0"/>
-                            </Style>
-                        </TextBox.Resources>
-                    </TextBox>
-                <TextBox x:Name="txtEmail" Grid.Row="2" Margin="20,10,20,10" Height="60" Width="400"
-                        Background="#FFD4D4D4" SelectionBrush="#FFCF6E00" SelectionTextBrush="#FF464646" FontSize="30"
-                        HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-                        Style="{DynamicResource PlaceholderTextBoxStyle}"
-                        Tag="E-mail"
-                        MaxLength="250"/>
+                <TextBox x:Name="txtUsername" Grid.Row="1" Margin="20,20,20,0" Height="60" Width="400"
+                    Background="#FFD4D4D4" SelectionBrush="#FFCF6E00" SelectionTextBrush="#FF464646" FontSize="30"
+                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                    Style="{DynamicResource PlaceholderTextBoxStyle}"
+                    Tag="username"
+                    MaxLength="20">
+                    <TextBox.Resources>
+                        <Style TargetType="{x:Type Border}">
+                            <Setter Property="CornerRadius" Value="10,10,0,0"/>
+                        </Style>
+                    </TextBox.Resources>
+                </TextBox>
+                <TextBlock x:Name="txtUsernameError" Grid.Row="1" Style="{StaticResource ErrorTextBlockStyle}" 
+                    VerticalAlignment="Bottom"/>
 
-                <PasswordBox x:Name="pswPassword" Grid.Row="3" Margin="20,10,20,15" Width="400" Height="60" Background="#FFD4D4D4"
-                        Tag="password" SelectionTextBrush="#FF464646" SelectionBrush="#FFCF6E00" FontSize="30"
-                        VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
-                        PasswordChar="*" Style="{DynamicResource ModernPasswordBoxStyle}"
-                        MaxLength="20">
-                        <i:Interaction.Behaviors>
-                            <local:PasswordBoxPlaceholderBehavior/>
-                            <!-- Подключаем Behavior -->
-                        </i:Interaction.Behaviors>
-                    </PasswordBox>
-                    <PasswordBox x:Name="pswConfirmPassword" Grid.Row="4" Margin="20,10,20,15" Width="400" Height="60" Background="#FFD4D4D4"
-                        Tag="confirm password" SelectionTextBrush="#FF464646" SelectionBrush="#FFCF6E00" FontSize="30"
-                        VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
-                        PasswordChar="*" Style="{DynamicResource ModernPasswordBoxStyle}"
-                        MaxLength="20">
-                        <i:Interaction.Behaviors>
-                            <local:PasswordBoxPlaceholderBehavior/>
-                            <!-- Подключаем Behavior -->
-                        </i:Interaction.Behaviors>
-                    </PasswordBox>
-                    <Button x:Name="btnSignUp" Grid.Row="5" Margin="20,0,20,13" Height="60" Width="400"
-                        Content="sign up" FontSize="30" Foreground="White" Cursor="Hand"
-                        Click="btnSignUp_Click"
-                        Style="{DynamicResource OrangeButtonsHover}">
-                        <Button.Resources>
-                            <Style TargetType="{x:Type Border}">
-                                <Setter Property="CornerRadius" Value="0 0 10 10"/>
-                            </Style>
-                        </Button.Resources>
-                    </Button>
-                </Grid>
+                <TextBox x:Name="txtEmail" Grid.Row="2" Margin="20,20,20,0" Height="60" Width="400"
+                    Background="#FFD4D4D4" SelectionBrush="#FFCF6E00" SelectionTextBrush="#FF464646" FontSize="30"
+                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                    Style="{DynamicResource PlaceholderTextBoxStyle}"
+                    Tag="E-mail"
+                    MaxLength="250"/>
+                <TextBlock x:Name="txtEmailError" Grid.Row="2" Style="{StaticResource ErrorTextBlockStyle}" 
+                    VerticalAlignment="Bottom"/>
+
+                <PasswordBox x:Name="pswPassword" Grid.Row="3" Margin="20,20,20,0" Width="400" Height="60" Background="#FFD4D4D4"
+                    Tag="password" SelectionTextBrush="#FF464646" SelectionBrush="#FFCF6E00" FontSize="30"
+                    VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
+                    PasswordChar="*" Style="{DynamicResource ModernPasswordBoxStyle}"
+                    MaxLength="20">
+                    <i:Interaction.Behaviors>
+                        <local:PasswordBoxPlaceholderBehavior/>
+                    </i:Interaction.Behaviors>
+                </PasswordBox>
+                <TextBlock x:Name="pswPasswordError" Grid.Row="3" Style="{StaticResource ErrorTextBlockStyle}" 
+                    VerticalAlignment="Bottom" Margin="20,0,20,0"/>
+
+                <PasswordBox x:Name="pswConfirmPassword" Grid.Row="4" Margin="20,20,20,0" Width="400" Height="60" Background="#FFD4D4D4"
+                    Tag="confirm password" SelectionTextBrush="#FF464646" SelectionBrush="#FFCF6E00" FontSize="30"
+                    VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
+                    PasswordChar="*" Style="{DynamicResource ModernPasswordBoxStyle}"
+                    MaxLength="20">
+                    <i:Interaction.Behaviors>
+                        <local:PasswordBoxPlaceholderBehavior/>
+                    </i:Interaction.Behaviors>
+                </PasswordBox>
+                <TextBlock x:Name="pswConfirmPasswordError" Grid.Row="4" Style="{StaticResource ErrorTextBlockStyle}" 
+                    VerticalAlignment="Bottom" Margin="20,0,20,0"/>
+
+                <Button x:Name="btnSignUp" Grid.Row="5" Margin="20,20,20,0" Height="60" Width="400"
+                    Content="sign up" FontSize="30" Foreground="White" Cursor="Hand"
+                    Click="btnSignUp_Click"
+                    Style="{DynamicResource OrangeButtonsHover}">
+                    <Button.Resources>
+                        <Style TargetType="{x:Type Border}">
+                            <Setter Property="CornerRadius" Value="0 0 10 10"/>
+                        </Style>
+                    </Button.Resources>
+                </Button>
+            </Grid>
         </Border>
         <Image Grid.Row="1" Source="../Images/logo.png" Width="300" VerticalAlignment="Top" Margin="0,-45,0,0"/>
 

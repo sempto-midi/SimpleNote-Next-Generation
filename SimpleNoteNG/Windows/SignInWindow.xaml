@@ -110,7 +110,7 @@
                             </Style>
                         </Button.Resources>
                     </Button>
-                    <TextBlock Grid.Row="3" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,-7">
+                    <TextBlock Grid.Row="3" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,-10">
                         <Hyperlink Foreground="White" Click="Hyperlink_Click">forgot password?</Hyperlink>
                     </TextBlock>
                 </Grid>

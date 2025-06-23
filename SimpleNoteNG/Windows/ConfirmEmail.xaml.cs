@@ -15,6 +15,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using SimpleNoteNG.Data;
+using System.Timers;
 
 namespace SimpleNoteNG.Windows
 {
@@ -28,6 +29,8 @@ namespace SimpleNoteNG.Windows
         private string _confirmationCode;
         private int _userId;
         private bool _isCodeValidating = false;
+        private System.Timers.Timer _resendTimer;
+        private int _secondsRemaining = 60;
 
         public ConfirmEmail(string username, string email, int userId)
         {
@@ -44,9 +47,56 @@ namespace SimpleNoteNG.Windows
                 return;
             }
 
+            InitializeResendTimer();
             GenerateAndSendConfirmationCode();
         }
+        private void InitializeResendTimer()
+        {
+            _resendTimer = new System.Timers.Timer(1000); // Таймер на 1 секунду
+            _resendTimer.Elapsed += ResendTimer_Elapsed;
+            _resendTimer.Start();
+            UpdateTimerText();
+        }
 
+        private void ResendTimer_Elapsed(object sender, ElapsedEventArgs e)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                _secondsRemaining--;
+                UpdateTimerText();
+
+                if (_secondsRemaining <= 0)
+                {
+                    _resendTimer.Stop();
+                    btnResend.IsEnabled = true;
+                    txtTimer.Text = "";
+                }
+            });
+        }
+
+        private void UpdateTimerText()
+        {
+            txtTimer.Text = $"({_secondsRemaining} sec)";
+        }
+
+        private async void BtnResend_Click(object sender, RoutedEventArgs e)
+        {
+            btnResend.IsEnabled = false;
+            _secondsRemaining = 60;
+            _resendTimer.Start();
+            UpdateTimerText();
+
+            // Показать анимацию отправки
+            var animation = new ColorAnimation
+            {
+                To = Colors.Green,
+                Duration = TimeSpan.FromSeconds(0.5),
+                AutoReverse = true
+            };
+            btnResend.Foreground.BeginAnimation(SolidColorBrush.ColorProperty, animation);
+
+            GenerateAndSendConfirmationCode();
+        }
         private bool IsValidEmail(string email)
         {
             try
@@ -70,15 +120,11 @@ namespace SimpleNoteNG.Windows
             try
             {
                 _confirmationCode = GenerateConfirmationCode();
-                SendEmail();
-            }
-            catch (SmtpException ex)
-            {
-                System.Windows.MessageBox.Show($"Error sending an email ({ex.Message})");
+                Task.Run(() => SendEmail()); // Отправка в фоновом потоке
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show(ex.Message);
+                Dispatcher.Invoke(() => MessageBox.Show($"Ошибка: {ex.Message}"));
             }
         }
 
@@ -196,8 +242,8 @@ namespace SimpleNoteNG.Windows
                         var user = db.Users.Find(_userId);
                         if (user != null)
                         {
-                            user.EmailConfirmed = true;
-                            db.SaveChanges();
+                            user.EmailConfirmed = true; // Изменено с EmailConfirmed на IsEmailVerified
+                            await db.SaveChangesAsync(); // Добавлен await для асинхронного сохранения
                         }
                     }
 
@@ -426,7 +472,11 @@ namespace SimpleNoteNG.Windows
             }
         }
 
-
+        protected override void OnClosed(EventArgs e)
+        {
+            base.OnClosed(e);
+            _resendTimer?.Dispose(); // Важно освободить ресурсы таймера
+        }
 
         private void Window_MouseDown(object sender, MouseButtonEventArgs e)
         {
