@@ -365,19 +365,7 @@ namespace SimpleNoteNG.Windows
             {
                 try
                 {
-                    // Загружаем один сэмпл
                     _audioEngine.LoadSample(dialog.FileName);
-
-                    // Обновляем UI первого канала
-                    if (MixerPanel.Children.Count > 0)
-                    {
-                        var firstChannel = MixerPanel.Children[0] as MixerChannel;
-                        if (firstChannel != null)
-                        {
-                            firstChannel.PluginName = Path.GetFileName(dialog.FileName);
-                        }
-                    }
-
                     MessageBox.Show("Сэмпл успешно загружен!", "Загрузка", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
