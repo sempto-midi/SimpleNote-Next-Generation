@@ -388,40 +388,46 @@ namespace SimpleNoteNG.Windows
         {
             var openDialog = new Microsoft.Win32.OpenFileDialog
             {
-                Filter = "MIDI Files (*.mid)|*.mid",
-                DefaultExt = ".mid"
+                Filter = "MIDI Files (*.mid;*.midi)|*.mid;*.midi",
+                DefaultExt = ".mid",
+                Multiselect = false
             };
+
             if (openDialog.ShowDialog() == true)
             {
                 try
                 {
-                    // Проверяем файл перед созданием проекта
+                    // Проверка существования файла
                     if (!File.Exists(openDialog.FileName))
                     {
                         MessageBox.Show("Selected file does not exist", "Error",
                             MessageBoxButton.OK, MessageBoxImage.Error);
                         return;
                     }
-                    // Проверяем, является ли файл валидным MIDI
+
+                    // Проверка валидности MIDI файла (без using)
                     try
                     {
-                        var testMidi = new MidiFile(openDialog.FileName);
-                        if (testMidi.Tracks == 0)
+                        var midiFile = new MidiFile(openDialog.FileName);
+                        if (midiFile.Tracks == 0)
                         {
                             MessageBox.Show("The selected MIDI file contains no tracks", "Error",
                                 MessageBoxButton.OK, MessageBoxImage.Error);
                             return;
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        MessageBox.Show("The selected file is not a valid MIDI file", "Error",
+                        MessageBox.Show($"Invalid MIDI file: {ex.Message}", "Error",
                             MessageBoxButton.OK, MessageBoxImage.Error);
                         return;
                     }
+
+                    // Создание нового проекта
                     using (var db = new AppDbContext())
                     {
-                        var projectName = System.IO.Path.GetFileNameWithoutExtension(openDialog.FileName);
+                        var projectName = Path.GetFileNameWithoutExtension(openDialog.FileName);
+
                         var newProject = new Project
                         {
                             UserId = _userId,
@@ -430,17 +436,25 @@ namespace SimpleNoteNG.Windows
                             CreatedAt = DateTime.Now,
                             UpdatedAt = DateTime.Now
                         };
+
                         db.Projects.Add(newProject);
                         db.SaveChanges();
+
                         var workspace = new Workspace(newProject.ProjectId, _userId);
-                        workspace.LoadProject(newProject.Path); // Загружаем проект сразу после создания
                         workspace.Show();
+
+                        Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            workspace.LoadProject(openDialog.FileName);
+                            
+                        }));
+
                         this.Close();
                     }
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error loading project: {ex.Message}", "Error",
+                    MessageBox.Show($"Error creating project: {ex.Message}", "Error",
                         MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }

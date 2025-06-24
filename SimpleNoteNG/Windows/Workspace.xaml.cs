@@ -121,7 +121,7 @@ namespace SimpleNoteNG.Windows
         }
         public void LoadProject(string filePath)
         {
-            _pianoRoll.LoadMidiFile(filePath);
+            _pianoRoll.ImportFromMidi(filePath);
         }
 
         public void InitializeEmptyProject()
