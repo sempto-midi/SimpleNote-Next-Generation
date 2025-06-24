@@ -307,14 +307,24 @@ namespace SimpleNoteNG.Windows
 			};
 			ChannelRack.Children.Add(header);
 
-			var addButton = new System.Windows.Controls.Button
-			{
-				Content = "Add Plugin",
-				Width = 200,
-				Height = 30,
-				Margin = new Thickness(0, 20, 0, 0),
-				Background = Brushes.Orange
-			};
+            var plugName = new TextBlock
+            {
+                Text = "",
+                Foreground = Brushes.White,
+                Margin = new Thickness(0, 0, 0, 10),
+                FontSize = 14
+            };
+            ChannelRack.Children.Add(plugName);
+
+            var addButton = new System.Windows.Controls.Button
+            {
+                Content = "Add Plugin",
+                Width = 200,
+                Height = 30,
+                Margin = new Thickness(0, 20, 0, 0),
+                Style = (Style)FindResource("OrangeButtonsHover"),
+                Cursor = Cursors.Hand
+            };
 			addButton.Click += AddPluginButton_Click;
 			ChannelRack.Children.Add(addButton);
 		}
