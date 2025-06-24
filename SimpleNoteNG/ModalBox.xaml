@@ -28,8 +28,24 @@
                   FontSize="20"
                   TextWrapping="Wrap" Margin="0,10" Text="Message" VerticalAlignment="Center"/>
 
-            <Button x:Name="OkButton" Grid.Row="1" Content="OK" Width="80" Margin="5,0" Cursor="Hand"
-                Style="{DynamicResource OrangeButtonsHover}" Click="OkButton_Click" HorizontalAlignment="Center" VerticalAlignment="Center" Height="30"/>
+            <Button x:Name="OkButton" Grid.Row="1" Content="OK" Width="80" Margin="30,0,0,0" Cursor="Hand"
+                Style="{DynamicResource OrangeButtonsHover}" Click="OkButton_Click"
+                VerticalAlignment="Center" Height="30" HorizontalAlignment="Left">
+                <Button.Resources>
+                    <Style TargetType="{x:Type Border}">
+                        <Setter Property="CornerRadius" Value="5"/>
+                    </Style>
+                </Button.Resources>
+            </Button>
+            <Button x:Name="CancelButton" Grid.Row="1" Content="Cancel" Width="80" Margin="0,0,30,0" Cursor="Hand"
+                Style="{DynamicResource OrangeButtonsHover}" Click="CancelButton_Click"
+                VerticalAlignment="Center" Height="30" HorizontalAlignment="Right">
+                <Button.Resources>
+                    <Style TargetType="{x:Type Border}">
+                        <Setter Property="CornerRadius" Value="5"/>
+                    </Style>
+                </Button.Resources>
+            </Button>
         </Grid>
     </Border>
 </Window>

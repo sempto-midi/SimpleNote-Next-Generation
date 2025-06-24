@@ -74,5 +74,11 @@ namespace SimpleNoteNG
             storyboard.Completed += (s, args) => this.DialogResult = true;
             storyboard.Begin();
         }
+
+        private void CancelButton_Click(object sender, RoutedEventArgs e)
+        {
+            this.DialogResult = false;
+            this.Close();
+        }
     }
 }

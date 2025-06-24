@@ -8,6 +8,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
+using System.Windows.Forms;
 
 namespace SimpleNoteNG.Pages
 {
@@ -87,14 +88,16 @@ namespace SimpleNoteNG.Pages
             // Проверка имени пользователя
             if (string.IsNullOrWhiteSpace(UsernameEditBox.Text))
             {
-                MessageBox.Show("Username cannot be empty", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                var box = new ModalBox(null, "Username cannot be empty!");
+                box.ShowDialog();
                 return false;
             }
 
             // Проверка email
             if (string.IsNullOrWhiteSpace(EmailEditBox.Text) || !EmailEditBox.Text.Contains("@"))
             {
-                MessageBox.Show("Please enter a valid email address", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                var box = new ModalBox(null, "Please enter a valid email address!");
+                box.ShowDialog();
                 return false;
             }
 
@@ -130,24 +133,24 @@ namespace SimpleNoteNG.Pages
                         }
 
                         db.SaveChanges();
-                        MessageBox.Show("Changes saved successfully", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                        var box = new ModalBox(null, "Changes saved successfully!");
+                        box.ShowDialog();
                     }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error saving changes: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                var box = new ModalBox(null, $"Error saving changes: {ex.Message}");
+                box.ShowDialog();
             }
         }
 
         private void DeleteButton_Click(object sender, RoutedEventArgs e)
         {
-            var result = MessageBox.Show("Are you sure you want to delete your account? All your projects will be lost.",
-                "Confirm Deletion",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
+            var box = new ModalBox(null, "Are you sure you want to delete your account?");
+            box.ShowDialog();
 
-            if (result == MessageBoxResult.Yes)
+            if (box.DialogResult == true)
             {
                 var parentWindow = Window.GetWindow(this) as ProjectsWindow;
                 parentWindow?.DeleteAccount();
@@ -156,12 +159,10 @@ namespace SimpleNoteNG.Pages
 
         private void LogoutButton_Click(object sender, RoutedEventArgs e)
         {
-            var result = MessageBox.Show("Are you sure you want to logout?",
-                "Confirm Logout",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
+            var box = new ModalBox(null, "Are you sure you want to logout?");
+            box.ShowDialog();
 
-            if (result == MessageBoxResult.Yes)
+            if (box.DialogResult == true)
             {
                 var parentWindow = Window.GetWindow(this) as ProjectsWindow;
                 parentWindow?.Logout();

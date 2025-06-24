@@ -52,7 +52,6 @@ namespace SimpleNoteNG.Windows
 			LoadPianoRoll();
             _metronome.BeatChanged += Metronome_BeatChanged;
 
-            this.KeyDown += Workspace_KeyDown;
             this.PreviewKeyDown += Workspace_PreviewKeyDown;
             this.Focusable = true;
             this.Focus(); // Чтобы окно получало фокус и ловило клавиши
@@ -76,7 +75,6 @@ namespace SimpleNoteNG.Windows
                     _pluginTracks.Clear();
 
                     // Отписываемся от событий
-                    this.KeyDown -= Workspace_KeyDown;
                     this.PreviewKeyDown -= Workspace_PreviewKeyDown;
                 }
 
@@ -105,38 +103,6 @@ namespace SimpleNoteNG.Windows
             }
         }
 
-        private void Workspace_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.S && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
-            {
-                ShowSaveFormatDialog();
-            }
-        }
-        private void ShowSaveFormatDialog()
-        {
-            var result = MessageBox.Show(
-                "Выберите формат для сохранения:\n\n" +
-                "- Нажмите 'Yes' чтобы сохранить как MIDI\n" +
-                "- Нажмите 'No' чтобы сохранить как MP3",
-                "Сохранить проект",
-                MessageBoxButton.YesNoCancel,
-                MessageBoxImage.Question);
-
-            switch (result)
-            {
-                case MessageBoxResult.Yes:
-                    ExportToMIDI_Click(null, null);
-                    break;
-
-                case MessageBoxResult.No:
-                    ExportToMP3_Click(null, null);
-                    break;
-
-                case MessageBoxResult.Cancel:
-                    // Отмена — ничего не делаем
-                    break;
-            }
-        }
         private void Metronome_BeatChanged(int beat)
         {
             Dispatcher.Invoke(() =>
@@ -366,11 +332,13 @@ namespace SimpleNoteNG.Windows
                 try
                 {
                     _audioEngine.LoadSample(dialog.FileName);
-                    MessageBox.Show("Сэмпл успешно загружен!", "Загрузка", MessageBoxButton.OK, MessageBoxImage.Information);
+                    var box = new ModalBox(this, "Successfully added new WAV!");
+                    box.ShowDialog();
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Ошибка загрузки файла: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    var box = new ModalBox(this, $"Error! {ex.Message}");
+                    box.ShowDialog();
                 }
             }
         }

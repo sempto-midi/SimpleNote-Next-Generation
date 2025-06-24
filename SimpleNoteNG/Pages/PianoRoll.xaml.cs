@@ -262,8 +262,8 @@ namespace SimpleNoteNG.Pages
                 }
                 if (!File.Exists(filePath))
                 {
-                    MessageBox.Show("MIDI file not found", "Error",
-                                  MessageBoxButton.OK, MessageBoxImage.Error);
+                    var box = new ModalBox(null, "MIDI file not found");
+                    box.ShowDialog();
                     InitializeEmptyProject();
                     return;
                 }
@@ -272,8 +272,8 @@ namespace SimpleNoteNG.Pages
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading MIDI: {ex.Message}", "Error",
-                              MessageBoxButton.OK, MessageBoxImage.Error);
+                var box = new ModalBox(null, $"Error loading MIDI: {ex.Message}");
+                box.ShowDialog();
                 InitializeEmptyProject();
             }
         }
@@ -337,11 +337,6 @@ namespace SimpleNoteNG.Pages
             else if (e.Key == Key.A && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
             {
                 SelectAllNotes();
-                e.Handled = true;
-            }
-            else if(e.Key == Key.S && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
-            {
-                ShowSaveFormatDialog();
                 e.Handled = true;
             }
         }
@@ -1258,42 +1253,16 @@ namespace SimpleNoteNG.Pages
                 MidiFile.Export(filePath, midiEvents);
                 UpdateProjectInDatabase(filePath, projectId, userId);
 
-                MessageBox.Show("MIDI файл успешно экспортирован!", "Экспорт",
-                               MessageBoxButton.OK, MessageBoxImage.Information);
+                var box = new ModalBox(null, "Success!");
+                box.ShowDialog();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка экспорта: {ex.Message}", "Ошибка",
-                               MessageBoxButton.OK, MessageBoxImage.Error);
+                var box = new ModalBox(null, $"Error! {ex.Message}");
+                box.ShowDialog();
             }
         }
-        private void ShowSaveFormatDialog()
-        {
-            var parent = new Workspace(_projectId, _userId);
-
-            var result = MessageBox.Show(
-                "Выберите формат для сохранения:\n\n" +
-                "- Нажмите 'Yes' чтобы сохранить как MIDI\n" +
-                "- Нажмите 'No' чтобы сохранить как MP3",
-                "Сохранить проект",
-                MessageBoxButton.YesNoCancel,
-                MessageBoxImage.Question);
-
-            switch (result)
-            {
-                case MessageBoxResult.Yes:
-                    parent.ExportToMIDI_Click(null, null);
-                    break;
-
-                case MessageBoxResult.No:
-                    parent.ExportToMP3_Click(null, null);
-                    break;
-
-                case MessageBoxResult.Cancel:
-                    // Отмена — ничего не делаем
-                    break;
-            }
-        }
+        
         private void UpdateProjectInDatabase(string filePath, int projectId, int userId)
         {
             try
@@ -1316,15 +1285,15 @@ namespace SimpleNoteNG.Pages
                     }
                     else
                     {
-                        MessageBox.Show("Проект не найден в базе данных", "Ошибка",
-                                       MessageBoxButton.OK, MessageBoxImage.Warning);
+                        var box = new ModalBox(null, "Project not found in database");
+                        box.ShowDialog();
                     }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка при обновлении проекта: {ex.Message}", "Ошибка",
-                               MessageBoxButton.OK, MessageBoxImage.Error);
+                var box = new ModalBox(null, $"Error updating the project: {ex.Message}");
+                box.ShowDialog();
             }
         }
 
@@ -1405,13 +1374,13 @@ namespace SimpleNoteNG.Pages
 
                 File.Delete(tempWavPath);
 
-                MessageBox.Show("MP3 файл успешно экспортирован!", "Экспорт",
-                              MessageBoxButton.OK, MessageBoxImage.Information);
+                var box = new ModalBox(null, "The MP3 file has been successfully exported!");
+                box.ShowDialog();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка при экспорте MP3: {ex.Message}", "Ошибка",
-                              MessageBoxButton.OK, MessageBoxImage.Error);
+                var box = new ModalBox(null, $"Error exporting MP3: {ex.Message}");
+                box.ShowDialog();
             }
         }
         public void ImportFromMidi(string filePath, bool resetPosition = true)
@@ -1425,8 +1394,8 @@ namespace SimpleNoteNG.Pages
                 }
                 if (!File.Exists(filePath))
                 {
-                    MessageBox.Show("MIDI file not found", "Error",
-                                  MessageBoxButton.OK, MessageBoxImage.Error);
+                    var box = new ModalBox(null, "TMIDI file not found");
+                    box.ShowDialog();
                     InitializeEmptyProject();
                     return;
                 }
@@ -1445,8 +1414,8 @@ namespace SimpleNoteNG.Pages
                 // Проверяем, что ticksPerQuarterNote не равен 0
                 if (ticksPerQuarterNote == 0)
                 {
-                    MessageBox.Show("Invalid MIDI file: DeltaTicksPerQuarterNote is zero", "Error",
-                                  MessageBoxButton.OK, MessageBoxImage.Error);
+                    var box = new ModalBox(null, "Invalid MIDI file: DeltaTicksPerQuarterNote is zero");
+                    box.ShowDialog();
                     InitializeEmptyProject();
                     return;
                 }
@@ -1488,8 +1457,8 @@ namespace SimpleNoteNG.Pages
 
                 if (!noteEvents.Any())
                 {
-                    MessageBox.Show("No notes found in MIDI file", "Information",
-                                  MessageBoxButton.OK, MessageBoxImage.Information);
+                    var box = new ModalBox(null, "No notes found in MIDI file");
+                    box.ShowDialog();
                     InitializeEmptyProject();
                     return;
                 }
@@ -1550,8 +1519,8 @@ namespace SimpleNoteNG.Pages
             {
                 Dispatcher.Invoke(() =>
                 {
-                    MessageBox.Show($"Error importing MIDI: {ex.Message}", "Error",
-                                  MessageBoxButton.OK, MessageBoxImage.Error);
+                    var box = new ModalBox(null, $"Error importing MIDI: {ex.Message}");
+                    box.ShowDialog();
                     InitializeEmptyProject();
                 });
             }
